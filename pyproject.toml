@@ -1,0 +1,36 @@
+[project]
+name = "boldaric"
+version = "0.1.0"
+description = "A Personal Radio Server Powered by Your Own Library and Machine Learning."
+readme = "README.md"
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3.11",
+    "Development Status :: 3 - Alpha",
+]
+# Essential-tensorflow is only prebuild
+#  for python 3.11
+requires-python = "~=3.11.0"
+dependencies = [
+    "numpy==1.26.4",
+    "essentia-tensorflow==2.1b6.dev1110",
+    "scikit-learn==1.6.1",
+    "chromadb==1.0.8",
+    "pydantic==2.11.4",
+    "mutagen==1.47.0",
+    "py-sonic==1.0.3",
+    "aiohttp==3.11.18",
+    "Unidecode==1.4.0",
+    "rich==14.0.0"
+]
+
+[project.optional-dependencies]
+test = ["pytest==8.3.5"]
+dev = [] 
+
+[project.urls]
+Homepage = "https://github.com/line72/boldaric"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
