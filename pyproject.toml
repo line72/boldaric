@@ -26,7 +26,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest==8.3.5"]
-dev = ["flake8~=7.2.0", "pylint~=3.3.7", "black~=25.1.0"] 
+dev = ["flake8~=7.2.0", "flake8-black~=0.3.6", "pylint~=3.3.7", "black~=25.1.0"] 
 
 [project.urls]
 Homepage = "https://github.com/line72/boldaric"
@@ -40,3 +40,11 @@ include-package-data = false
 
 [tool.setuptools.packages.find]
 include = ["boldaric"]
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "E501", "W291"]
+
+[tool.black]
+line-length = 88
+target-version = ['py311'] 

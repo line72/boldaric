@@ -10,14 +10,73 @@
 # This provides a RESTful API for creating stations, getting next
 # tracks for a stations, rating songs, seeding songs, and so on.
 
-import aiohttp
+from aiohttp import web
 import asyncio
 import multiprocessing
 
 import argparse
+import os
+import json
+import hashlib
+
+import boldaric
+import boldaric.subsonic
+
+routes = web.RouterTableDef()
+
+@web.middleware
+async def auth_middleware(request, handler):
+    # Skip auth for non-api routes and the auth endpoint
+    if not request.path.startswith('/api') or request.path == '/api/auth':
+        return await handler(request)
+
+    # salt
+    salt = request.app['salt']
+    user_salts = dict([(hashlib.sha256(salt + x[1].encode('utf-8')).hexdigest(), {'id': x[0], 'username': x[1]}) for x in request.app['web_db'].get_all_users()])
+    
+    # For all other routes, require Authorization header
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return web.json_response({'error': 'Unauthorized'}, status=401)
+    
+    auth_token = auth_header[7:]
+
+    user = user_salts.get(auth_token)
+    if not user:
+        return web.json_response({'error': 'Unauthorized'}, status=401)
+
+    # Store this user in the request
+    request['user'] = user
+    
+    return await handler(request)  
+
 
 async def main(port):
-    
+    # create some things to store in our app state
+    vec_db = boldaric.VectorDB.build_from_http()
+    sub_conn = boldaric.subsonic.make_from_paramers('', '', '')
+
+    # generate a common pool we'll use for multiprocessing
+    # Not creating/throwing this away speed things up
+    pool = multiprocessing.Pool()
+
+    # Generate a salt that we'll use for auth
+    salt = os.urandom(16)
+
+    app = web.Application(middlewares=[auth_middleware])
+    app.add_routes(routes)
+
+    app['vec_db'] = vec_db
+    app['sub_conn'] = sub_conn
+    app['pool'] = pool
+    app['salt'] = salt
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+
+    site = web.TCPSite(runner, '0.0.0.0', port)
+    await site.start()
+    await asyncio.Future()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Boldaric Web Server")

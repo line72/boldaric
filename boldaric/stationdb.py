@@ -13,6 +13,7 @@ import pickle
 
 from . import simulator
 
+
 class StationDB:
     """
     A simple SQLite-based persistence layer for user stations and playback history.
