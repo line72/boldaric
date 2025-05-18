@@ -125,7 +125,7 @@ class VectorDB:
         embedding.extend(mood_features.tolist())
         
         metadata = TrackMetadata(
-            path=path,
+            path=meta.get('path', ''),
             artist=meta.get('artist', 'Unknown Artist'),
             album=meta.get('album', 'Unknown Album'),
             title=meta.get('title', 'Unknown Track'),
