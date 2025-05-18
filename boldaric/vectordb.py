@@ -40,25 +40,33 @@ class TrackMetadata(BaseModel):
 
 
 class VectorDB:
-    def __init__(self, path: str = "./chroma_db"):
-        # This becomes a problem with multiple threads. So I am
-        # switching to using the client-server mode:
+    def __init__(self, client: chromadb.ClientAPI):
+        collection_name = "audio_features"
+
+        self.client = client
+        self.collection = self.client.get_or_create_collection(
+            name=collection_name,
+            metadata={"hnsw:space": "cosine", "dimension": DIMENSIONS},
+        )
+
+    @staticmethod
+    def build_from_path(path: str) -> "VectorDB":
+        client = chromadb.PersistentClient(path=path)
+        return VectorDB(client)
+
+    @staticmethod
+    def build_from_http(host: str = "localhost", port: int = 8000) -> "VectorDB":
         # https://docs.trychroma.com/docs/run-chroma/client-server
         #
         # Make sure the server is running by first doing:
         #  `chroma run --path /db_path`
         #
-        collection_name = "audio_features"
-
-        self.client = chromadb.HttpClient(
-            host="localhost",
-            port=8000,
+        client = chromadb.HttpClient(
+            host=host,
+            port=port,
             settings=chromadb.Settings(anonymized_telemetry=False),
         )
-        self.collection = self.client.get_or_create_collection(
-            name=collection_name,
-            metadata={"hnsw:space": "cosine", "dimension": DIMENSIONS},
-        )
+        return VectorDB(client)
 
     def add_track(self, subsonic_id: str, features: dict):
         """Store a track's features"""
