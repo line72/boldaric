@@ -16,7 +16,7 @@ import chromadb
 from chromadb.api.types import Embedding, Document, ID, OneOrMany, Include, Metadata
 import json
 
-from boldaric.vectordb import features_to_embeddings
+from boldaric.feature_helper import features_to_embeddings
 from sklearn.metrics.pairwise import cosine_similarity
 
 
@@ -49,14 +49,12 @@ def migrate_database(src_path: str, dst_path: str) -> None:
         print(f"Processing collection: {collection.name}")
         
         # Get all data from source collection
-        results = src_collection.get(include=["embeddings", "metadatas", "documents", "uris", "data"])
+        results = src_collection.get(include=["embeddings", "metadatas", "documents"])
         
         ids = results["ids"]
         embeddings = results["embeddings"]
         metadatas = results["metadatas"]
         documents = results["documents"]
-        uris = results["uris"]
-        data = results["data"]
         
         # Recompute embeddings from original features
         normalized_embeddings = []
@@ -71,19 +69,35 @@ def migrate_database(src_path: str, dst_path: str) -> None:
         print(f"Finished normalizing {len(normalized_embeddings)} embeddings")
         
         # Delete all existing data in destination collection
-        dst_collection.delete(ids=ids)
+        def chunked_delete(collection, ids, chunk_size=900):
+            """Delete IDs in smaller batches to avoid SQL variable limits."""
+            for i in range(0, len(ids), chunk_size):
+                chunk = ids[i:i + chunk_size]
+                collection.delete(ids=chunk)
+                print(f"Deleted {len(chunk)} items (batch {i // chunk_size + 1})")
+
+        chunked_delete(dst_collection, ids)
+
+        def chunked_add(collection, ids, embeddings, metadatas, documents, chunk_size=5000):
+            """Add items in smaller batches to avoid batch size limits."""
+            for i in range(0, len(ids), chunk_size):
+                end = i + chunk_size
+                chunk_ids = ids[i:end]
+                chunk_embeddings = embeddings[i:end]
+                chunk_metadatas = metadatas[i:end]
+                chunk_documents = documents[i:end]
+
+                collection.add(
+                    ids=chunk_ids,
+                    embeddings=chunk_embeddings,
+                    metadatas=chunk_metadatas,
+                    documents=chunk_documents
+                )
+                print(f"Inserted {len(chunk_ids)} items (batch {i // chunk_size + 1})")
         
         # Insert normalized data
         print("Inserting normalized embeddings into destination database...")
-        dst_collection.add(
-            ids=ids,
-            embeddings=normalized_embeddings,
-            metadatas=metadatas,
-            documents=documents,
-            uris=uris,
-            data=data
-        )
-        
+        chunked_add(dst_collection, ids, normalized_embeddings, metadatas, documents) 
         print(f"Successfully migrated {len(ids)} items in collection {collection.name}")
 
 if __name__ == "__main__":

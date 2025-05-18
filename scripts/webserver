@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+
+# Copyright (c) 2025 Marcus Dillavou <line72@line72.net>
+# Part of the Boldaric Project:
+#  https://github.com/line72/boldaric
+# Released under the AGPLv3 or later
+
+# Web Server for the boldaric project
+#
+# This provides a RESTful API for creating stations, getting next
+# tracks for a stations, rating songs, seeding songs, and so on.
+
+import aiohttp
+import asyncio
+import multiprocessing
+
+import argparse
+
+async def main(port):
+    
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Boldaric Web Server")
+    parser.add_argument(
+        "-p", "--port", type=int, default=8765, help="Port to run the web server on"
+    )
+
+    args = parser.parse_args()
+
+    asyncio.run(main(args.port))
