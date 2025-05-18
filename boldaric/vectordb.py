@@ -102,7 +102,7 @@ class VectorDB:
                 k: v for k, v in meta.items() if k.startswith("musicbrainz")
             },
             subsonic_id=subsonic_id,
-        ).dict()
+        ).model_dump()
 
         # Stringify list-based fields
         metadata["tagged_genres"] = "; ".join(metadata["tagged_genres"])
@@ -129,9 +129,7 @@ class VectorDB:
 
         tech_data = metadata.pop("technical", {})
         for key, value in tech_data.items():
-            metadata[f"tech_{key}"] = (
-                float(value) if isinstance(value, (int, float)) else str(value)
-            )
+            metadata[f"tech_{key}"] = str(value)  # Always store as string
 
         # Use the subsonic id as the doc id
         doc_id = subsonic_id
@@ -193,7 +191,7 @@ class VectorDB:
             query_embedding = np.array(embedding)
             result_features = json.loads(doc)
             result_artist = result_meta.get("artist", "Unknown")
-
+            
             similarities_and_contributions = self.calculate_similarities(
                 query_embedding, result_embedding, distance
             )
@@ -241,16 +239,12 @@ class VectorDB:
         # 2. MFCC features (13D)
         mfcc_stats = features.get("mfcc", {})
         mfcc_means = np.array(mfcc_stats.get("mean", np.zeros(13)))[:13]
-        if len(mfcc_means) > 0:
-            mfcc_min = np.min(mfcc_means)
-            mfcc_max = np.max(mfcc_means)
-            mfcc_range = mfcc_max - mfcc_min
-            if mfcc_range > 1e-9:
-                mfcc_means = (mfcc_means - mfcc_min) / mfcc_range
-            else:
-                mfcc_means = np.zeros_like(mfcc_means)
-        else:
-            mfcc_means = np.zeros(13)
+        
+        # Normalize the entire MFCC vector rather than per-feature
+        norm = np.linalg.norm(mfcc_means)
+        if norm > 1e-9:
+            mfcc_means = mfcc_means / norm
+            
         embedding.extend(mfcc_means.tolist())
 
         # 3. Groove features (2D)
@@ -272,7 +266,18 @@ class VectorDB:
         mood_features = 1 / (1 + np.exp(-np.array(mood_features)))
         embedding.extend(mood_features.tolist())
 
-        return embedding
+        # !mwd - My AI Agent suggest that I should have been
+        #  normalizing the full embedding in additional to normalizing
+        #  each feature. In earlier versions, I was not doing this. If
+        #  you have an old database, you'll need to run the
+        #  `scripts/fix-embedding-normalization.py` to migrate the
+        #  embeddings.
+        #
+        # Normalize the full embedding vector
+        embedding = np.array(embedding)
+        embedding /= np.linalg.norm(embedding)
+
+        return embedding.tolist()
 
     def calculate_similarities(self, query_embedding, result_embedding, distance):
         "Try to quantify similarities in different dimensions, since we know what our embeddings mean"
