@@ -191,7 +191,7 @@ class VectorDB:
             query_embedding = np.array(embedding)
             result_features = json.loads(doc)
             result_artist = result_meta.get("artist", "Unknown")
-            
+
             similarities_and_contributions = self.calculate_similarities(
                 query_embedding, result_embedding, distance
             )
@@ -239,12 +239,12 @@ class VectorDB:
         # 2. MFCC features (13D)
         mfcc_stats = features.get("mfcc", {})
         mfcc_means = np.array(mfcc_stats.get("mean", np.zeros(13)))[:13]
-        
+
         # Normalize the entire MFCC vector rather than per-feature
         norm = np.linalg.norm(mfcc_means)
         if norm > 1e-9:
             mfcc_means = mfcc_means / norm
-            
+
         embedding.extend(mfcc_means.tolist())
 
         # 3. Groove features (2D)
