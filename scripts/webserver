@@ -39,7 +39,7 @@ THUMBS_UP_RATING = 5
 THUMBS_DOWN_RATING = -3
 
 
-routes = web.RouterTableDef()
+routes = web.RouteTableDef()
 
 
 def get_next_song(db, conn, pool, history, played, thumbs_downed):
@@ -393,7 +393,7 @@ async def main(port):
     # create some things to store in our app state
     vec_db = boldaric.VectorDB.build_from_http()
     station_db = boldaric.StationDB("db/stations.db")
-    sub_conn = boldaric.subsonic.make_from_paramers("", "", "")
+    sub_conn = boldaric.subsonic.make_from_parameters("", "", "")
 
     # generate a common pool we'll use for multiprocessing
     # Not creating/throwing this away speed things up

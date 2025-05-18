@@ -18,3 +18,5 @@ boldaric.egg-info/
 chroma_db*/
 
 run-in-env
+
+db/*
