@@ -13,6 +13,7 @@
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
+
 def features_to_embeddings(features: dict) -> list[float]:
     """Convert a feature list from metadata or the extractor into
     database embeddings"""
@@ -76,6 +77,62 @@ def features_to_embeddings(features: dict) -> list[float]:
     embedding /= np.linalg.norm(embedding)
 
     return embedding.tolist()
+
+
+def features_to_list(features):
+    # This takes a feature map and converts it to
+    # a list of our 148 features
+    # we essentially have 148 dimensions:
+    #  128 for genres
+    #  13 fo mfcc
+    #  2 for groove
+    #  5 for mood
+    feature_list = []
+
+    feature_list.extend(features["genre_embeddings"][:128])
+    feature_list.extend(features["mfcc"]["mean"][:13])
+    feature_list.append(features["groove"]["danceability"])
+    feature_list.append(features["groove"]["tempo_stability"])
+    feature_list.append(features["mood"]["probabilities"]["aggressive"])
+    feature_list.append(features["mood"]["probabilities"]["happy"])
+    feature_list.append(features["mood"]["probabilities"]["party"])
+    feature_list.append(features["mood"]["probabilities"]["relaxed"])
+    feature_list.append(features["mood"]["probabilities"]["sad"])
+
+    return feature_list
+
+
+def list_to_features(averages):
+    # !mwd - Averages is going to be a list of our 148 features
+    # This will turn them back into "feature" object that our
+    #  db expects
+    genre_start = 0
+    genre_end = 128
+    mfcc_start = genre_end
+    mfcc_end = mfcc_start + 13
+    groove_start = mfcc_end
+    groove_end = groove_start + 2
+    mood_start = groove_end
+
+    features = {
+        "genre_embeddings": averages[genre_start:genre_end],
+        "mfcc": {"mean": averages[mfcc_start:mfcc_end]},
+        "groove": {
+            "danceability": averages[groove_start],
+            "tempo_stability": averages[groove_start + 1],
+        },
+        "mood": {
+            "probabilities": {
+                "aggressive": averages[mood_start],
+                "happy": averages[mood_start + 1],
+                "party": averages[mood_start + 2],
+                "relaxed": averages[mood_start + 3],
+                "sad": averages[mood_start + 4],
+            }
+        },
+    }
+
+    return features
 
 
 def calculate_similarities(query_embedding, result_embedding, distance):
