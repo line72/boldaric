@@ -130,29 +130,6 @@ async def auth_middleware(request, handler):
     return await handler(request)
 
 
-@routes.get("/")
-async def index(request):
-    with open(resources_path / "index.html", "r") as f:
-        return web.Response(text=f.read(), content_type="text/html")
-
-
-@routes.get(
-    "/{filename:service-worker.js|manifest.json|icon-192x192.png|icon-512x512.png}"
-)
-async def static_files(request):
-    filename = request.match_info["filename"]
-    content_types = {
-        "service-worker.js": "application/javascript",
-        "manifest.json": "application/json",
-        "icon-192x192.png": "image/png",
-        "icon-512x512.png": "image/png",
-    }
-    content_type = content_types.get(filename, "application/octet-stream")
-
-    with open(filename, "rb") as f:
-        return web.Response(body=f.read(), content_type=content_type)
-
-
 @routes.post("/api/auth")
 async def auth(request):
     data = await request.json()
