@@ -303,13 +303,12 @@ async def get_next_song_for_station(request):
 @routes.post("/api/station/{station_id}/seed")
 async def add_seed(request):
     data = await request.json()
-    song_id = data["song_id"].strip()
 
     vec_db = request.app["vec_db"]
     station_db = request.app["station_db"]
 
     station_id = request.match_info["station_id"]
-    song_id = request.match_info["song_id"]
+    song_id = data["song_id"].strip()
 
     track = vec_db.get_track(song_id)
     feature_list = boldaric.feature_helper.features_to_list(track["features"])
