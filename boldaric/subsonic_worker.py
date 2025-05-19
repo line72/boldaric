@@ -168,7 +168,6 @@ def latinize_text(text):
 
 
 def progress_bar_worker(progress_queue, stop_queue):
-    waiting_to_be_added = {}
     in_progress = {}
     completed = []
 
@@ -186,7 +185,16 @@ def progress_bar_worker(progress_queue, stop_queue):
                 q = progress_queue.get(timeout=0.1)
                 match q:
                     case ("ADD", artist_id, artist_name, total_songs):
-                        waiting_to_be_added[artist_id] = {
+                        # We have an actual update, so now create a progress bar
+                        task_id = progress.add_task(
+                            latinize_text(artist_name),
+                            total=total_songs,
+                        )
+                        progress.update(task_id, advance=0)
+
+                        # move to inprogress
+                        in_progress[artist_id] = {
+                            "task_id": task_id,
                             "artist_name": artist_name,
                             "total_songs": total_songs,
                             "count": 0,
@@ -195,29 +203,7 @@ def progress_bar_worker(progress_queue, stop_queue):
                         p = in_progress.get(artist_id)
                         match p:
                             case None:
-                                p2 = waiting_to_be_added.pop(artist_id)
-                                match p2:
-                                    case {
-                                        "artist_name": artist_name,
-                                        "total_songs": total_songs,
-                                        "count": current_count,
-                                    }:
-                                        # We have an actual update, so now create a progress bar
-                                        task_id = progress.add_task(
-                                            latinize_text(artist_name),
-                                            total=total_songs,
-                                        )
-                                        progress.update(task_id, advance=count)
-
-                                        # move to inprogress
-                                        in_progress[artist_id] = {
-                                            "task_id": task_id,
-                                            "artist_name": artist_name,
-                                            "total_songs": total_songs,
-                                            "count": count,
-                                        }
-                                    case _:
-                                        pass
+                                pass
                             case {
                                 "task_id": task_id,
                                 "total_songs": total_songs,
