@@ -389,7 +389,7 @@ async def search(request):
     return web.json_response(results)
 
 
-async def main(db_path, port):
+async def go(db_path, port):
     for i in ("NAVIDROME_URL", "NAVIDROME_USERNAME", "NAVIDROME_PASSWORD"):
         if not os.getenv(i):
             raise Exception(f"Please make sure environment variable {i} is set")
@@ -426,8 +426,7 @@ async def main(db_path, port):
     await site.start()
     await asyncio.Future()
 
-
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser(description="Boldaric Web Server")
     parser.add_argument(
         "-d",
@@ -454,4 +453,7 @@ if __name__ == "__main__":
         handlers=[logging.StreamHandler()],  # Console output
     )
 
-    asyncio.run(main(args.db_path, args.port))
+    asyncio.run(go(args.db_path, args.port))
+    
+if __name__ == "__main__":
+    main()
