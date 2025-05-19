@@ -17,6 +17,7 @@
 #
 # It will also show a progress bar of the status
 
+import os
 import argparse
 import random
 import tempfile
