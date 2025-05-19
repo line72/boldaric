@@ -300,8 +300,11 @@ async def get_next_song_for_station(request):
         return web.json_response({"error": "Unable to find next song"}, status=400)
 
 
-@routes.post("/api/station/{station_id}/{song_id}")
+@routes.post("/api/station/{station_id}/seed")
 async def add_seed(request):
+    data = await request.json()
+    song_id = data["song_id"].strip()
+
     vec_db = request.app["vec_db"]
     station_db = request.app["station_db"]
 
@@ -426,6 +429,7 @@ async def go(db_path, port):
     await site.start()
     await asyncio.Future()
 
+
 def main():
     parser = argparse.ArgumentParser(description="Boldaric Web Server")
     parser.add_argument(
@@ -454,6 +458,7 @@ def main():
     )
 
     asyncio.run(go(args.db_path, args.port))
-    
+
+
 if __name__ == "__main__":
     main()
