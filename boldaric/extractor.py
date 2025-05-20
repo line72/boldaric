@@ -281,7 +281,7 @@ def extract_features(file_path):
     # 7. Mood Predictions
     # ======================
     mood_model = es.TensorflowPredictMusiCNN(
-        graphFilename=files("boldaric.models").joinpath("msd-musicnn-1.pb"),
+        graphFilename=str(files("boldaric.models").joinpath("msd-musicnn-1.pb")),
         output="model/dense/BiasAdd",
     )
     mood_output = mood_model(audio_16k)
@@ -303,7 +303,7 @@ def extract_features(file_path):
     # 8. Genre Predictions
     # ======================
     genre_model = es.TensorflowPredictEffnetDiscogs(
-        graphFilename=files("boldaric.models").joinpath("discogs-effnet-bs64-1.pb"),
+        graphFilename=str(files("boldaric.models").joinpath("discogs-effnet-bs64-1.pb")),
         output="PartitionedCall:1",
     )
     embeddings = genre_model(audio_16k)
@@ -316,9 +316,9 @@ def extract_features(file_path):
     features["genre_embeddings"] = embeddings.flatten()[:128].tolist()
 
     classifier = es.TensorflowPredict2D(
-        graphFilename=files("boldaric.models").joinpath(
+        graphFilename=str(files("boldaric.models").joinpath(
             "genre_discogs400-discogs-effnet-1.pb"
-        ),
+        )),
         input="serving_default_model_Placeholder",
         output="PartitionedCall:0",
     )
