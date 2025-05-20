@@ -14,6 +14,8 @@ import os
 import numpy as np
 from mutagen import File
 
+from importlib.resources import files
+
 from . import labels
 
 
@@ -278,57 +280,56 @@ def extract_features(file_path):
     # ======================
     # 7. Mood Predictions
     # ======================
-    if os.path.exists("models/msd-musicnn-1.pb"):
-        mood_model = es.TensorflowPredictMusiCNN(
-            graphFilename="models/msd-musicnn-1.pb", output="model/dense/BiasAdd"
-        )
-        mood_output = mood_model(audio_16k)
+    mood_model = es.TensorflowPredictMusiCNN(
+        graphFilename=files("boldaric.models").joinpath("msd-musicnn-1.pb"),
+        output="model/dense/BiasAdd",
+    )
+    mood_output = mood_model(audio_16k)
 
-        mood_logits = {
-            "aggressive": float(mood_output[0, 0]),
-            "happy": float(mood_output[0, 1]),
-            "party": float(mood_output[0, 2]),
-            "relaxed": float(mood_output[0, 3]),
-            "sad": float(mood_output[0, 4]),
-        }
+    mood_logits = {
+        "aggressive": float(mood_output[0, 0]),
+        "happy": float(mood_output[0, 1]),
+        "party": float(mood_output[0, 2]),
+        "relaxed": float(mood_output[0, 3]),
+        "sad": float(mood_output[0, 4]),
+    }
 
-        features["mood"] = {
-            "logits": mood_logits,
-            "probabilities": {k: float(sigmoid(v)) for k, v in mood_logits.items()},
-        }
+    features["mood"] = {
+        "logits": mood_logits,
+        "probabilities": {k: float(sigmoid(v)) for k, v in mood_logits.items()},
+    }
 
     # ======================
     # 8. Genre Predictions
     # ======================
-    if os.path.exists("models/discogs-effnet-bs64-1.pb"):
-        genre_model = es.TensorflowPredictEffnetDiscogs(
-            graphFilename="models/discogs-effnet-bs64-1.pb", output="PartitionedCall:1"
-        )
-        embeddings = genre_model(audio_16k)
-        # Handle 3D output (batch, time, features) by averaging across all dimensions except last
-        if embeddings.ndim == 3:
-            embeddings = np.mean(embeddings, axis=(0, 1))
-        else:
-            embeddings = np.mean(embeddings, axis=0)
-        # Ensure final 1D array of exactly 128 elements
-        features["genre_embeddings"] = embeddings.flatten()[:128].tolist()
+    genre_model = es.TensorflowPredictEffnetDiscogs(
+        graphFilename=files("boldaric.models").joinpath("discogs-effnet-bs64-1.pb"),
+        output="PartitionedCall:1",
+    )
+    embeddings = genre_model(audio_16k)
+    # Handle 3D output (batch, time, features) by averaging across all dimensions except last
+    if embeddings.ndim == 3:
+        embeddings = np.mean(embeddings, axis=(0, 1))
+    else:
+        embeddings = np.mean(embeddings, axis=0)
+    # Ensure final 1D array of exactly 128 elements
+    features["genre_embeddings"] = embeddings.flatten()[:128].tolist()
 
-        if os.path.exists("models/genre_discogs400-discogs-effnet-1.pb"):
-            classifier = es.TensorflowPredict2D(
-                graphFilename="models/genre_discogs400-discogs-effnet-1.pb",
-                input="serving_default_model_Placeholder",
-                output="PartitionedCall:0",
-            )
-            # Reshape embeddings to 2D array with batch dimension
-            classifier_input = np.expand_dims(embeddings, axis=0)
-            predictions = classifier(classifier_input)
-            scores = np.mean(predictions, axis=0).squeeze().tolist()
+    classifier = es.TensorflowPredict2D(
+        graphFilename=files("boldaric.models").joinpath(
+            "genre_discogs400-discogs-effnet-1.pb"
+        ),
+        input="serving_default_model_Placeholder",
+        output="PartitionedCall:0",
+    )
+    # Reshape embeddings to 2D array with batch dimension
+    classifier_input = np.expand_dims(embeddings, axis=0)
+    predictions = classifier(classifier_input)
+    scores = np.mean(predictions, axis=0).squeeze().tolist()
 
-            features["genre"] = [
-                {"label": label, "score": float(score)}
-                for label, score in sorted(
-                    zip(labels.labels, scores), key=lambda x: -x[1]
-                )[:10]
-            ]
+    features["genre"] = [
+        {"label": label, "score": float(score)}
+        for label, score in sorted(zip(labels.labels, scores), key=lambda x: -x[1])[:10]
+    ]
 
     return features

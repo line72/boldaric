@@ -42,9 +42,6 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 include-package-data = true
 
-#[tool.setuptools.data-files]
-#"share/boldaric" = ["resources"]
-
 [tool.setuptools.packages.find]
 include = ["boldaric"]
 
