@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Copyright (c) 2025 Marcus Dillavou <line72@line72.net>
 # Part of the Boldaric Project:
 #  https://github.com/line72/boldaric
