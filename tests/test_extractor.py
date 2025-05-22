@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from pathlib import Path
 
-from boldaric.extractor import extract_features
+from boldaric.extractor import extract_features, extract_metadata
 
 # Test audio file path - this should be a real audio file
 # To run tests, you'll need to provide a real audio file at this path
@@ -494,8 +494,14 @@ def test_extract_features_with_invalid_file(tmp_path):
 
 def test_metadata_extraction(sample_audio_file):
     """Test that metadata is extracted correctly"""
-    features = extract_features(sample_audio_file)
-    metadata = features["metadata"]
+    import essentia.standard as es
+    from mutagen import File
+
+    loader_44_1k = es.MonoLoader(filename=sample_audio_file, sampleRate=44100)
+    audio_44_1k = loader_44_1k()
+    audio_file = File(sample_audio_file)
+    
+    metadata = extract_metadata(sample_audio_file, audio_file, audio_44_1k)
 
     # Check that we have basic metadata fields
     required_metadata = {"path", "duration", "audio_length"}
@@ -508,9 +514,3 @@ def test_metadata_extraction(sample_audio_file):
     assert isinstance(metadata["duration"], float)
     assert metadata["duration"] > 0
 
-
-def test_extract_genre_returns_embeddings():
-    """Test that genre extraction returns embeddings"""
-    # This test is a bit tricky since we need to mock audio data
-    # We'll test the structure of the output when we have valid audio
-    pass  # TODO: Implement with proper audio mocking if needed
