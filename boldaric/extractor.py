@@ -19,11 +19,8 @@ from importlib.resources import files
 from . import labels
 
 
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
-
-
 def extract_features(file_path):
+    """Extract features from an audio file."""
     # disable logging
     logging.getLogger("tensorflow").setLevel(logging.ERROR)
     logging.getLogger("essentia").setLevel(logging.ERROR)
@@ -52,8 +49,52 @@ def extract_features(file_path):
 
     features = {}
 
-    # Extract file metadata
+    # Extract metadata
     audio_file = File(file_path)
+    features["metadata"] = extract_metadata(file_path, audio_file, audio_44_1k)
+
+    # Extract basic features
+    bpm, beats, beats_confidence, loudness, dynamic_complexity = extract_basic_features(audio_44_1k)
+    features["bpm"] = bpm
+    features["loudness"] = loudness
+    features["dynamic_complexity"] = dynamic_complexity
+
+    # Extract temporal dynamics
+    features["energy_curve"] = extract_temporal_dynamics(audio_44_1k)
+
+    # Extract harmonic content
+    key_features, chord_stability = extract_harmonic_content(audio_44_1k)
+    features["key"] = key_features
+    features["chord_stability"] = chord_stability
+
+    # Extract vocal characteristics
+    features["vocal"] = extract_vocal_characteristics(audio_44_1k)
+
+    # Extract timbral texture
+    features["mfcc"], features["spectral_character"] = extract_timbral_texture(
+        audio_44_1k
+    )
+
+    # Extract advanced rhythm features
+    features["groove"] = extract_advanced_rhythm(audio_44_1k, bpm, beats, beats_confidence)
+
+    # Extract mood predictions
+    features["mood"] = extract_mood_predictions(audio_16k)
+
+    # Extract genre predictions
+    genre, genre_embeddings = extract_genre_predictions(audio_16k)
+    features["genre"] = genre
+    features["genre_embeddings"] = genre_embeddings
+
+    return features
+
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+
+def extract_metadata(file_path, audio_file, audio_44_1k):
+    """Extract metadata from audio file."""
     tags = {"path": os.path.abspath(file_path)}
 
     # Common tag fields across formats
@@ -122,20 +163,26 @@ def extract_features(file_path):
     if hasattr(audio_file, "info") and hasattr(audio_file.info, "length"):
         tags["duration"] = audio_file.info.length
 
-    features["metadata"] = tags
+    return tags
 
-    # ======================
-    # 1. Basic Features
-    # ======================
-    features["bpm"], beats, _, _, beats_confidence = es.RhythmExtractor2013()(
+
+def extract_basic_features(audio_44_1k):
+    """Extract basic audio features including BPM, loudness, and dynamic complexity."""
+    import essentia.standard as es
+
+    bpm, beats, _, _, beats_confidence = es.RhythmExtractor2013()(
         audio_44_1k
     )
-    features["loudness"] = es.Loudness()(audio_44_1k)
-    features["dynamic_complexity"], _ = es.DynamicComplexity()(audio_44_1k)
+    loudness = es.Loudness()(audio_44_1k)
+    dynamic_complexity, _ = es.DynamicComplexity()(audio_44_1k)
 
-    # ======================
-    # 2. Temporal Dynamics
-    # ======================
+    return (bpm, beats, beats_confidence, loudness, dynamic_complexity)
+
+
+def extract_temporal_dynamics(audio_44_1k):
+    """Extract temporal dynamics features from audio."""
+    import essentia.standard as es
+
     frame_size = 1024
     hop_size = 512
     energy = []
@@ -143,23 +190,24 @@ def extract_features(file_path):
         spectrum = es.Spectrum()(frame)
         energy.append(np.sum(spectrum**2))
 
-    features["energy_curve"] = {
+    return {
         "mean": float(np.mean(energy)),
         "std": float(np.std(energy)),
         "peak_count": int(np.sum(np.diff(np.sign(np.diff(energy))) < 0)),
     }
 
-    # ======================
-    # 3. Harmonic Content
-    # ======================
+
+def extract_harmonic_content(audio_44_1k):
+    """Extract harmonic content features including key and chord stability."""
+    import essentia.standard as es
+
     # Key detection
     key, scale, key_strength = es.KeyExtractor()(audio_44_1k)
-    features["key"] = {"tonic": key, "scale": scale, "confidence": float(key_strength)}
+    key_features = {"tonic": key, "scale": scale, "confidence": float(key_strength)}
 
     # Chroma feature extraction with proper framing
     frame_size = 32768
     hop_size = 16384
-    chroma_vectors = []
 
     try:
         chroma_frames = []
@@ -173,20 +221,24 @@ def extract_features(file_path):
             # Convert to correct format for ChordsDetection
             chroma_series = chroma_frames
             chords, chords_confidence = es.ChordsDetection()(chroma_series)
-            features["chord_stability"] = {
+            chord_stability = {
                 "unique_chords": len(set(chords)),
                 "change_rate": len(chords) / (len(audio_44_1k) / 44100),
             }
         else:
-            features["chord_stability"] = "insufficient_data"
+            chord_stability = "insufficient_data"
 
     except Exception as e:
         print(f"Chromagram error: {str(e)}")
-        features["chord_stability"] = "analysis_failed"
+        chord_stability = "analysis_failed"
 
-    # ======================
-    # 4. Vocal Characteristics (Revised)
-    # ======================
+    return (key_features, chord_stability)
+
+
+def extract_vocal_characteristics(audio_44_1k):
+    """Extract vocal characteristics from audio."""
+    import essentia.standard as es
+
     # Using pitch detection as proxy for vocal presence
     frame_size = 2048
     hop_size = 1024
@@ -195,7 +247,7 @@ def extract_features(file_path):
     pitch_values, _ = pitch_detector(audio_44_1k)
     vocal_features = [1 if p > 0 else 0 for p in pitch_values]
 
-    features["vocal"] = {
+    return {
         "pitch_presence_ratio": float(np.mean(vocal_features)),
         "pitch_segment_count": int(np.sum(np.diff(vocal_features) > 0)),
         "avg_pitch_duration": float(
@@ -203,13 +255,15 @@ def extract_features(file_path):
         ),
     }
 
-    # ======================
-    # 5. Timbral Texture
-    # ======================
+
+def extract_timbral_texture(audio_44_1k):
+    """Extract timbral texture features including spectral contrast and MFCC."""
+    import essentia.standard as es
+
     frame_size = 2048
     hop_size = 1024
-    spectra = []
 
+    spectra = []
     for frame in es.FrameGenerator(audio_44_1k, frameSize=frame_size, hopSize=hop_size):
         windowed = es.Windowing(type="hann")(frame)
         spectrum = es.Spectrum()(windowed)
@@ -224,7 +278,7 @@ def extract_features(file_path):
         contrasts.append(contrast)
         valleys.append(valley)
 
-    features["spectral_character"] = {
+    spectral_character = {
         "contrast_mean": float(np.mean(contrasts)),
         "brightness": float(np.mean([c[-1] for c in contrasts])),
         "valley_std": float(np.std(valleys)),
@@ -237,15 +291,19 @@ def extract_features(file_path):
         mfccs.append(mfcc[1])
 
     mfccs = np.array(mfccs)
-    features["mfcc"] = {
+    mfcc_features = {
         "mean": np.mean(mfccs, axis=0).tolist(),
         "covariance": np.cov(mfccs, rowvar=False).tolist(),
         "temporal_variation": float(np.mean(np.std(mfccs, axis=0))),
     }
 
-    # ======================
-    # 6. Advanced Rhythm
-    # ======================
+    return mfcc_features, spectral_character
+
+
+def extract_advanced_rhythm(audio_44_1k, bpm, beats, beats_confidence):
+    """Extract advanced rhythm features."""
+    import essentia.standard as es
+
     if len(beats) > 1:
         ibi = np.diff(beats)
         tempo_variation = np.std(60 / ibi)
@@ -257,8 +315,11 @@ def extract_features(file_path):
 
     # Danceability estimation
     danceability, dnc_beats = es.Danceability()(audio_44_1k)
-    features["groove"] = {
-        "tempo_stability": float(1 - tempo_variation / features["bpm"]),
+
+    return {
+        "tempo_stability": (
+            float(1 - tempo_variation / bpm) if bpm > 0 else 0.0
+        ),
         "beat_confidence": float(np.mean(beats_confidence)),
         "syncopation": float(syncopation),
         "danceability": float(danceability),
@@ -277,9 +338,11 @@ def extract_features(file_path):
         ),
     }
 
-    # ======================
-    # 7. Mood Predictions
-    # ======================
+
+def extract_mood_predictions(audio_16k):
+    """Extract mood predictions from audio."""
+    import essentia.standard as es
+
     mood_model = es.TensorflowPredictMusiCNN(
         graphFilename=str(files("boldaric.models").joinpath("msd-musicnn-1.pb")),
         output="model/dense/BiasAdd",
@@ -294,16 +357,20 @@ def extract_features(file_path):
         "sad": float(mood_output[0, 4]),
     }
 
-    features["mood"] = {
+    return {
         "logits": mood_logits,
         "probabilities": {k: float(sigmoid(v)) for k, v in mood_logits.items()},
     }
 
-    # ======================
-    # 8. Genre Predictions
-    # ======================
+
+def extract_genre_predictions(audio_16k):
+    """Extract genre predictions from audio."""
+    import essentia.standard as es
+
     genre_model = es.TensorflowPredictEffnetDiscogs(
-        graphFilename=str(files("boldaric.models").joinpath("discogs-effnet-bs64-1.pb")),
+        graphFilename=str(
+            files("boldaric.models").joinpath("discogs-effnet-bs64-1.pb")
+        ),
         output="PartitionedCall:1",
     )
     embeddings = genre_model(audio_16k)
@@ -313,12 +380,12 @@ def extract_features(file_path):
     else:
         embeddings = np.mean(embeddings, axis=0)
     # Ensure final 1D array of exactly 128 elements
-    features["genre_embeddings"] = embeddings.flatten()[:128].tolist()
+    genre_embeddings = embeddings.flatten()[:128].tolist()
 
     classifier = es.TensorflowPredict2D(
-        graphFilename=str(files("boldaric.models").joinpath(
-            "genre_discogs400-discogs-effnet-1.pb"
-        )),
+        graphFilename=str(
+            files("boldaric.models").joinpath("genre_discogs400-discogs-effnet-1.pb")
+        ),
         input="serving_default_model_Placeholder",
         output="PartitionedCall:0",
     )
@@ -327,9 +394,10 @@ def extract_features(file_path):
     predictions = classifier(classifier_input)
     scores = np.mean(predictions, axis=0).squeeze().tolist()
 
-    features["genre"] = [
-        {"label": label, "score": float(score)}
-        for label, score in sorted(zip(labels.labels, scores), key=lambda x: -x[1])[:10]
-    ]
-
-    return features
+    return (
+        [
+            {"label": label, "score": float(score)}
+            for label, score in sorted(zip(labels.labels, scores), key=lambda x: -x[1])[:10]
+        ],
+        genre_embeddings
+    )
