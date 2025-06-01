@@ -15,6 +15,14 @@ it as a self-hosted, personal Pandora music service: one with no ads,
 no data sharing or tracking, and no algorithmic bias toward popular
 tracks!
 
+## Clients
+
+Boldaric is only a recommendation server. You'll need a client to
+connect to it.
+
+* iOS :: [Tor Jolan](https://github.com/line72/torjolan/) | [App
+  Store](https://apps.apple.com/us/app/tor-jolan/id6746386627)
+
 ## Why Boldaric?
 
 I have a large music collection that I've been building for 30
@@ -115,7 +123,62 @@ test with and recommend:
 
 ## Getting Started
 
-TO DO
+### Docker
+
+For a global install, I recommend using docker:
+
+```
+docker build -t boldaric .
+```
+
+Once the image is built, you can create a container. There are several
+environment variables you'll need to pass to the container:
+
+* `NAVIDROME_URL`
+* `NAVIDROME_USERNAME`
+* `NAVIDROME_PASSWORD`
+
+I recommend using a user with limited privileges!
+
+Also, you probably want your database to persist, so please mount a
+volume to the `/app` directory!
+
+```
+docker create \
+  --name boldaric \
+  -e NAVIDROME_URL=https://navidrome.example.com \
+  -e NAVIDROME_USERNAME=user \
+  -e NAVIDROME_PASSWORD='password' \
+  -v ./app:/app \
+  boldaric:latest
+```
+
+The server runs on port `8765` by default. (Note, this will also
+expose port `8000` which is the chromadb port. By default, this has NO
+password, so you may want to block this.
+
+### Extractor
+
+By default, the server does NOT automatically run the extractor. It is
+expected that you'll do this manually. For now, you'll have to re-run
+this every time you add new music to your library.
+
+*Exec into the existing container*
+```
+docker exec -it boldaric bash
+```
+
+*Start the extractor*
+```
+boldaric-extractor
+```
+
+This will take A LONG time. Expect about 5-15 minutes _per_ song in
+your library, depending on your hardware. By default, this will run
+multi-process, with one process per core.
+
+If you stop this process early, or it dies, you can run it again, and
+it will start where it left off.
 
 ## Developing
 
