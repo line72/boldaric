@@ -138,7 +138,7 @@ environment variables you'll need to pass to the container:
 * `NAVIDROME_USERNAME`
 * `NAVIDROME_PASSWORD`
 
-I recommend using a user with limited privileges!
+I recommend using a navidrome user with limited privileges!
 
 Also, you probably want your database to persist, so please mount a
 volume to the `/app` directory!
