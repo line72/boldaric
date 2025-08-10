@@ -1,6 +1,6 @@
 [project]
 name = "boldaric"
-version = "0.1.0"
+version = "0.9.0"
 description = "A Personal Radio Server Powered by Your Own Library and Machine Learning."
 readme = "README.md"
 classifiers = [
