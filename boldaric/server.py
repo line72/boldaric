@@ -233,7 +233,7 @@ async def get_next_song_for_station(request):
 
     next_tracks = await loop.run_in_executor(
         None,
-        lambda: get_next_song(vec_db, sub_conn, pool, history, played, thumbs_downed),
+        lambda: get_next_songs(vec_db, sub_conn, pool, history, played, thumbs_downed),
     )
 
     # grab 3 choices based upon similarity
