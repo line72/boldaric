@@ -261,7 +261,7 @@ async def get_next_song_for_station(request):
                 "cover_url": cover_url,
             }
 
-        return web.json_response(list(map(top_tracks, lambda t: make_response(t))))
+        return web.json_response({"tracks": list(map(top_tracks, lambda t: make_response(t)))})
     else:
         return web.json_response({"error": "Unable to find next song"}, status=400)
 
