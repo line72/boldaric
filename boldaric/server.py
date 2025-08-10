@@ -83,7 +83,7 @@ def get_next_songs(db, conn, pool, history, played, thumbs_downed):
     logger.debug(f"Possible tracks {possible_tracks}")
 
     # return all tracks that have subsonic info
-    tracks = filter(possible_tracks, lambda t: "subsonic_id" in t["metadata"] and t["metadata"]["subsonic_id"] not in (None, ""))
+    tracks = filter(lambda t: "subsonic_id" in t["metadata"] and t["metadata"]["subsonic_id"] not in (None, ""), possible_tracks)
     
     return list(tracks)
 
