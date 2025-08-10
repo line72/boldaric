@@ -292,7 +292,7 @@ async def add_seed(request):
 
     return web.json_response({"success": True})
 
-@routes.put("/api/station/{station_id/{song_id}")
+@routes.put("/api/station/{station_id}/{song_id}")
 async def add_song_to_history(request):
     vec_db = request.app["vec_db"]
     station_db = request.app["station_db"]
