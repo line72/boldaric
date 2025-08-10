@@ -76,16 +76,16 @@ def get_next_songs(db, conn, pool, history, played, thumbs_downed):
     # Sort by similarity
     tracks.sort(key=lambda x: -x["similarity"])
 
+    # return all tracks that have subsonic info
+    tracks = list(filter(lambda t: "subsonic_id" in t["metadata"] and t["metadata"]["subsonic_id"] not in (None, ""), tracks))
+
     possible_tracks = [
         (x["metadata"]["artist"], x["metadata"]["title"], x["similarity"])
         for x in tracks
     ]
     logger.debug(f"Possible tracks {possible_tracks}")
 
-    # return all tracks that have subsonic info
-    tracks = filter(lambda t: "subsonic_id" in t["metadata"] and t["metadata"]["subsonic_id"] not in (None, ""), possible_tracks)
-    
-    return list(tracks)
+    return tracks
 
 @web.middleware
 async def auth_middleware(request, handler):
@@ -261,7 +261,7 @@ async def get_next_song_for_station(request):
                 "cover_url": cover_url,
             }
 
-        return web.json_response({"tracks": list(map(top_tracks, lambda t: make_response(t)))})
+        return web.json_response({"tracks": list(map(lambda t: make_response(t), top_tracks))})
     else:
         return web.json_response({"error": "Unable to find next song"}, status=400)
 
