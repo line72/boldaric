@@ -112,7 +112,7 @@ class StationDB:
             ).fetchone()
             return {"id": row[0], "name": row[1]} if row else None
 
-    def get_station_options(self, station_id: int) -> StationOptions | None:
+    def get_station_options(self, station_id: int) -> StationOptions:
         """Get the options for a station"""
         with self._connect() as conn:
             row = conn.execute(
@@ -120,13 +120,11 @@ class StationDB:
                 (station_id,),
             ).fetchone()
 
-            if row and row[0]:
-                return StationOptions(
-                    replay_song_cooldown=row[0],
-                    replay_artist_downrank=row[1],
-                    ignore_live=row[2],
-                )
-            return None
+            return StationOptions(
+                replay_song_cooldown=row[0],
+                replay_artist_downrank=row[1],
+                ignore_live=row[2],
+            )
 
     def set_station_options(
         self,
@@ -134,7 +132,7 @@ class StationDB:
         replay_song_cooldown: int,
         replay_artist_downrank: float,
         ignore_live: bool,
-    ):
+    ) -> None :
         with self._connect() as conn:
             conn.execute(
                 "UPDATE stations SET replay_song_cooldown = ?, replay_artist_downrank = ?, ignore_live = ? WHERE id = ?",

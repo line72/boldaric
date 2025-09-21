@@ -22,6 +22,7 @@ from pathlib import Path
 
 import boldaric
 import boldaric.subsonic
+from boldaric.records.station_options import StationOptions
 
 # Development mode path
 DEV_RESOURCES = Path(__file__).parent.parent / "resources"
@@ -41,7 +42,7 @@ THUMBS_DOWN_RATING = -3
 routes = web.RouteTableDef()
 
 
-def get_next_songs(db, conn, pool, station_options, history, played, thumbs_downed):
+def get_next_songs(db, conn, pool, station_options: StationOptions, history: list, played: list[tuple[str, str, bool]], thumbs_downed: list[tuple[str, str, bool]]) -> list[dict]:
     logger = logging.getLogger(__name__)
     logger.debug("get_next_song")
 
@@ -235,7 +236,7 @@ async def get_next_song_for_station(request):
     for embedding, rating in embeddings:
         history = boldaric.simulator.add_history(history, embedding, rating)
 
-    station_options = station_db.get_station_options(station_id)
+    station_options: StationOptions = station_db.get_station_options(station_id)
 
     # load up the track history
     thumbs_downed = station_db.get_thumbs_downed_history(station_id)
