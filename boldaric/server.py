@@ -41,7 +41,7 @@ THUMBS_DOWN_RATING = -3
 routes = web.RouteTableDef()
 
 
-def get_next_songs(db, conn, pool, history, played, thumbs_downed):
+def get_next_songs(db, conn, pool, station_options, history, played, thumbs_downed):
     logger = logging.getLogger(__name__)
     logger.debug("get_next_song")
 
@@ -56,8 +56,9 @@ def get_next_songs(db, conn, pool, history, played, thumbs_downed):
     ignore_list = []
     # ignore ALL thumbs downed
     ignore_list.extend([(x[0], x[1]) for x in thumbs_downed])
-    # ignore last 80 played
-    ignore_list.extend([(x[0], x[1]) for x in played[-80:]])
+    # ignore last X played
+    replay_song_cooldown = station_options["replay_song_cooldown"]
+    ignore_list.extend([(x[0], x[1]) for x in played[-replay_song_cooldown:]])
     logger.debug(f"ignoring {ignore_list}")
 
     tracks = db.query_similar(new_features, n_results=45, ignore_songs=ignore_list)
@@ -66,7 +67,10 @@ def get_next_songs(db, conn, pool, history, played, thumbs_downed):
     recent_artists = [x[0] for x in played[-15:]]
 
     def update_similarity(t):
-        similarity = 0.995 if t["metadata"]["artist"] in recent_artists else 1.0
+        replay_artist_downrank = station_options["replay_artist_downrank"]
+        similarity = (
+            replay_artist_downrank if t["metadata"]["artist"] in recent_artists else 1.0
+        )
         logger.debug(
             f"similarity for {t['metadata']['artist']} {t['metadata']['title']} is {similarity}"
         )
@@ -77,7 +81,13 @@ def get_next_songs(db, conn, pool, history, played, thumbs_downed):
     tracks.sort(key=lambda x: -x["similarity"])
 
     # return all tracks that have subsonic info
-    tracks = list(filter(lambda t: "subsonic_id" in t["metadata"] and t["metadata"]["subsonic_id"] not in (None, ""), tracks))
+    tracks = list(
+        filter(
+            lambda t: "subsonic_id" in t["metadata"]
+            and t["metadata"]["subsonic_id"] not in (None, ""),
+            tracks,
+        )
+    )
 
     possible_tracks = [
         (x["metadata"]["artist"], x["metadata"]["title"], x["similarity"])
@@ -86,6 +96,7 @@ def get_next_songs(db, conn, pool, history, played, thumbs_downed):
     logger.debug(f"Possible tracks {possible_tracks}")
 
     return tracks
+
 
 @web.middleware
 async def auth_middleware(request, handler):
@@ -224,34 +235,45 @@ async def get_next_song_for_station(request):
     for embedding, rating in embeddings:
         history = boldaric.simulator.add_history(history, embedding, rating)
 
+    station_options = station_db.get_station_options(station_id)
+
     # load up the track history
     thumbs_downed = station_db.get_thumbs_downed_history(station_id)
     # get most recent 100
-    played = station_db.get_track_history(station_id, 100)
+    played = station_db.get_track_history(
+        station_id, max(100, station_options["replay_song_cooldown"])
+    )
     # reverse the order
     played.reverse()
 
     next_tracks = await loop.run_in_executor(
         None,
-        lambda: get_next_songs(vec_db, sub_conn, pool, history, played, thumbs_downed),
+        lambda: get_next_songs(
+            vec_db, sub_conn, pool, station_options, history, played, thumbs_downed
+        ),
     )
 
     # grab 3 choices based upon similarity
     def get_random(tracks):
-        choice = random.choices(tracks, weights=[item['similarity'] for item in tracks], k=1)[0]
+        choice = random.choices(
+            tracks, weights=[item["similarity"] for item in tracks], k=1
+        )[0]
         # modify the original list here
         tracks.remove(choice)
         return choice
-        
-    top_tracks = [get_random(next_tracks),
-                  get_random(next_tracks),
-                  get_random(next_tracks)]
+
+    top_tracks = [
+        get_random(next_tracks),
+        get_random(next_tracks),
+        get_random(next_tracks),
+    ]
 
     if len(top_tracks) > 0:
+
         def make_response(t):
             stream_url = boldaric.subsonic.make_stream_link(sub_conn, t)
             cover_url = boldaric.subsonic.make_album_art_link(sub_conn, t)
-            
+
             return {
                 "url": stream_url,
                 "song_id": t["metadata"]["subsonic_id"],
@@ -261,9 +283,12 @@ async def get_next_song_for_station(request):
                 "cover_url": cover_url,
             }
 
-        return web.json_response({"tracks": list(map(lambda t: make_response(t), top_tracks))})
+        return web.json_response(
+            {"tracks": list(map(lambda t: make_response(t), top_tracks))}
+        )
     else:
         return web.json_response({"error": "Unable to find next song"}, status=400)
+
 
 @routes.post("/api/station/{station_id}/seed")
 async def add_seed(request):
@@ -291,6 +316,7 @@ async def add_seed(request):
     )
 
     return web.json_response({"success": True})
+
 
 @routes.put("/api/station/{station_id}/{song_id}")
 async def add_song_to_history(request):
@@ -386,10 +412,10 @@ def initialize_database(db_path):
     from alembic import command
     from alembic.config import Config
     import sqlite3
-    
+
     # Check if database exists
     db_exists = os.path.exists(db_path)
-    
+
     if db_exists:
         # Database exists, stamp it
         alembic_cfg = Config("alembic.ini")
@@ -399,9 +425,9 @@ def initialize_database(db_path):
     else:
         # Database doesn't exist, create it and run migrations
         # Create database file
-        with open(db_path, 'w') as f:
+        with open(db_path, "w") as f:
             pass
-        
+
         # Run migrations
         alembic_cfg = Config("alembic.ini")
         alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
@@ -463,9 +489,9 @@ def main():
         "-v", "--verbose", action="store_true", help="Enable verbose logging"
     )
     parser.add_argument(
-        "--initialize-db", 
-        action="store_true", 
-        help="Initialize database for migrations and exit"
+        "--initialize-db",
+        action="store_true",
+        help="Initialize database for migrations and exit",
     )
 
     args = parser.parse_args()

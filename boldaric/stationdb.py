@@ -32,9 +32,9 @@ class StationDB:
         # Check if database exists
         if not os.path.exists(self.db_path):
             # Create empty database file
-            with open(self.db_path, 'w') as f:
+            with open(self.db_path, "w") as f:
                 pass
-        
+
         # Run migrations
         alembic_cfg = Config("alembic.ini")
         alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{self.db_path}")
@@ -101,7 +101,7 @@ class StationDB:
             ).fetchone()
             return row[0] if row else None
 
-    def get_station(self, user_id: int, station_id: str) -> dict:
+    def get_station(self, user_id: int, station_id: str) -> dict | None:
         """Get a station by ID"""
         with self._connect() as conn:
             row = conn.execute(
@@ -109,6 +109,39 @@ class StationDB:
                 (user_id, station_id),
             ).fetchone()
             return {"id": row[0], "name": row[1]} if row else None
+
+    def get_station_options(self, station_id: int) -> dict | None:
+        """Get the options for a station"""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT replay_song_cooldown, replay_artist_downrank, ignore_live FROM stations WHERE id = ?",
+                (station_id,),
+            ).fetchone()
+            return (
+                {
+                    "replay_song_cooldown",
+                    row[0],
+                    "replay_artist_downrank",
+                    row[1],
+                    "ignore_live",
+                    row[2],
+                }
+                if row
+                else None
+            )
+
+    def set_station_options(
+        self,
+        station_id: int,
+        replay_song_cooldown: int,
+        replay_artist_downrank: float,
+        ignore_live: bool,
+    ):
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE stations SET replay_song_cooldown = ?, replay_artist_downrank = ?, ignore_live = ? WHERE id = ?",
+                (replay_song_cooldown, replay_artist_downrank, ignore_live, station_id),
+            )
 
     def get_station_embedding(self, station_id: int) -> list | None:
         """Get the current embedding for a station."""
