@@ -129,8 +129,9 @@ def process_song(song, conn, db):
 
         return {"status": "success", "id": subsonic_id, "path": song["path"]}
     except Exception as e:
-        print(f'Exception during song {song}: {e}')
+        print(f"Exception during song {song}: {e}")
         import traceback
+
         traceback.print_exc()
         return {
             "status": "error",
