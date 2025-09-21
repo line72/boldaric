@@ -13,6 +13,8 @@ import pickle
 from typing import Optional
 
 from . import simulator
+from .records.station_options import StationOptions
+
 from alembic import command
 from alembic.config import Config
 import os
@@ -110,25 +112,21 @@ class StationDB:
             ).fetchone()
             return {"id": row[0], "name": row[1]} if row else None
 
-    def get_station_options(self, station_id: int) -> dict | None:
+    def get_station_options(self, station_id: int) -> StationOptions | None:
         """Get the options for a station"""
         with self._connect() as conn:
             row = conn.execute(
                 "SELECT replay_song_cooldown, replay_artist_downrank, ignore_live FROM stations WHERE id = ?",
                 (station_id,),
             ).fetchone()
-            return (
-                {
-                    "replay_song_cooldown",
-                    row[0],
-                    "replay_artist_downrank",
-                    row[1],
-                    "ignore_live",
-                    row[2],
-                }
-                if row
-                else None
-            )
+
+            if row and row[0]:
+                return StationOptions(
+                    replay_song_cooldown=row[0],
+                    replay_artist_downrank=row[1],
+                    ignore_live=row[2],
+                )
+            return None
 
     def set_station_options(
         self,

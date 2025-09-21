@@ -57,7 +57,7 @@ def get_next_songs(db, conn, pool, station_options, history, played, thumbs_down
     # ignore ALL thumbs downed
     ignore_list.extend([(x[0], x[1]) for x in thumbs_downed])
     # ignore last X played
-    replay_song_cooldown = station_options["replay_song_cooldown"]
+    replay_song_cooldown = station_options.replay_song_cooldown
     ignore_list.extend([(x[0], x[1]) for x in played[-replay_song_cooldown:]])
     logger.debug(f"ignoring {ignore_list}")
 
@@ -67,7 +67,7 @@ def get_next_songs(db, conn, pool, station_options, history, played, thumbs_down
     recent_artists = [x[0] for x in played[-15:]]
 
     def update_similarity(t):
-        replay_artist_downrank = station_options["replay_artist_downrank"]
+        replay_artist_downrank = station_options.replay_artist_downrank
         similarity = (
             replay_artist_downrank if t["metadata"]["artist"] in recent_artists else 1.0
         )
@@ -241,7 +241,7 @@ async def get_next_song_for_station(request):
     thumbs_downed = station_db.get_thumbs_downed_history(station_id)
     # get most recent 100
     played = station_db.get_track_history(
-        station_id, max(100, station_options["replay_song_cooldown"])
+        station_id, max(100, station_options.replay_song_cooldown)
     )
     # reverse the order
     played.reverse()
