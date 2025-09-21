@@ -381,6 +381,34 @@ async def search(request):
     return web.json_response(results)
 
 
+def initialize_database(db_path):
+    """Initialize database for Alembic migrations."""
+    from alembic import command
+    from alembic.config import Config
+    import sqlite3
+    
+    # Check if database exists
+    db_exists = os.path.exists(db_path)
+    
+    if db_exists:
+        # Database exists, stamp it
+        alembic_cfg = Config("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+        command.stamp(alembic_cfg, "initial")
+        print(f"Existing database at {db_path} stamped for migrations")
+    else:
+        # Database doesn't exist, create it and run migrations
+        # Create database file
+        with open(db_path, 'w') as f:
+            pass
+        
+        # Run migrations
+        alembic_cfg = Config("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+        command.upgrade(alembic_cfg, "head")
+        print(f"New database created at {db_path} with migrations applied")
+
+
 async def go(db_path, port):
     for i in ("NAVIDROME_URL", "NAVIDROME_USERNAME", "NAVIDROME_PASSWORD"):
         if not os.getenv(i):
@@ -434,6 +462,11 @@ def main():
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Enable verbose logging"
     )
+    parser.add_argument(
+        "--initialize-db", 
+        action="store_true", 
+        help="Initialize database for migrations and exit"
+    )
 
     args = parser.parse_args()
 
@@ -445,6 +478,12 @@ def main():
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         handlers=[logging.StreamHandler()],  # Console output
     )
+
+    # Handle database initialization
+    if args.initialize_db:
+        db_file = os.path.join(args.db_path, "stations.db")
+        initialize_database(db_file)
+        return
 
     asyncio.run(go(args.db_path, args.port))
 
