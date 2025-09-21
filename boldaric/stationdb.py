@@ -10,8 +10,12 @@
 
 import sqlite3
 import pickle
+from typing import Optional
 
 from . import simulator
+from alembic import command
+from alembic.config import Config
+import os
 
 
 class StationDB:
@@ -21,7 +25,21 @@ class StationDB:
 
     def __init__(self, db_path: str = "stations.db"):
         self.db_path = db_path
+        self._run_migrations()
         self._initialize_db()
+
+    def _run_migrations(self):
+        """Run any pending database migrations."""
+        # Check if database exists
+        if not os.path.exists(self.db_path):
+            # Create empty database file
+            with open(self.db_path, 'w') as f:
+                pass
+        
+        # Run migrations
+        alembic_cfg = Config("alembic.ini")
+        alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{self.db_path}")
+        command.upgrade(alembic_cfg, "head")
 
     def _connect(self) -> sqlite3.Connection:
         """Create a new database connection."""
@@ -107,7 +125,7 @@ class StationDB:
             cur = conn.execute("INSERT INTO users (username) VALUES (?)", (username,))
             return cur.lastrowid
 
-    def get_user(self, username: str) -> tuple[int, str] | None:
+    def get_user(self, username: str) -> dict | None:
         """Get a user by username."""
         with self._connect() as conn:
             row = conn.execute(

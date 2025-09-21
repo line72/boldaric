@@ -21,7 +21,9 @@ dependencies = [
     "py-sonic==1.0.3",
     "aiohttp==3.11.18",
     "Unidecode==1.4.0",
-    "rich==14.0.0"
+    "rich==14.0.0",
+    "alembic==1.16.5",
+    "sqlalchemy==2.0.35"
 ]
 
 [project.entry-points."console_scripts"]
@@ -52,4 +54,4 @@ extend-ignore = ["E203", "E501", "W291"]
 
 [tool.black]
 line-length = 88
-target-version = ['py311'] 
+target-version = ['py311']
