@@ -26,7 +26,6 @@ class StationDB:
     def __init__(self, db_path: str = "stations.db"):
         self.db_path = db_path
         self._run_migrations()
-        self._initialize_db()
 
     def _run_migrations(self):
         """Run any pending database migrations."""
@@ -44,76 +43,6 @@ class StationDB:
     def _connect(self) -> sqlite3.Connection:
         """Create a new database connection."""
         return sqlite3.connect(self.db_path)
-
-    def _initialize_db(self):
-        """Create tables if they don't exist."""
-        with self._connect() as conn:
-            # Users table
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS users (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    username TEXT UNIQUE NOT NULL
-                )
-            """
-            )
-
-            # Stations table
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS stations (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id INTEGER NOT NULL,
-                    name TEXT NOT NULL,
-                    current_embedding BLOB,
-                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-                    UNIQUE(user_id, name)
-                )
-            """
-            )
-
-            # Track history table
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS track_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    station_id INTEGER NOT NULL,
-                    subsonic_id TEXT NOT NULL,
-                    artist TEXT NOT NULL,
-                    title TEXT NOT NULL,
-                    album TEXT,
-                    is_thumbs_downed BOOLEAN NOT NULL DEFAULT 0,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(station_id) REFERENCES stations(id) ON DELETE CASCADE
-                )
-            """
-            )
-
-            conn.execute(
-                """
-                CREATE UNIQUE INDEX IF NOT EXISTS idx_unique_station_subsonic
-                    ON track_history(station_id, subsonic_id);
-            """
-            )
-
-            # Embedding history table
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS embedding_history (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    station_id INTEGER NOT NULL,
-                    track_history_id INTEGER NOT NULL,
-                    embedding BLOB NOT NULL,
-                    rating INTEGER NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY(station_id) REFERENCES stations(id) ON DELETE CASCADE
-                    FOREIGN KEY(track_history_id) REFERENCES track_history(id) ON DELETE CASCADE
-                )
-            """
-            )
-
-            conn.commit()
 
     # ----------------------
     # User Management
