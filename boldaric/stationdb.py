@@ -114,10 +114,20 @@ class StationDB:
         """Get a station by ID"""
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT id, name FROM stations WHERE user_id = ? AND id = ?",
+                "SELECT id, name, replay_song_cooldown, replay_artist_downrank, ignore_live FROM stations WHERE user_id = ? AND id = ?",
                 (user_id, station_id),
             ).fetchone()
-            return {"id": row[0], "name": row[1]} if row else None
+            return (
+                {
+                    "id": row[0],
+                    "name": row[1],
+                    "replay_song_cooldown": row[2],
+                    "replay_artist_downrank": row[3],
+                    "ignore_live": row[4],
+                }
+                if row
+                else None
+            )
 
     def get_station_options(self, station_id: int) -> StationOptions:
         """Get the options for a station"""

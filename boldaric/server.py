@@ -315,6 +315,16 @@ async def get_next_song_for_station(request):
         return web.json_response({"error": "Unable to find next song"}, status=400)
 
 
+@routes.get("/api/station/{station_id}/info")
+async def get_station_info(request):
+    user = request["user"]
+    station_id = request.match_info["station_id"]
+
+    station = request.app["station_db"].get_station(user["id"], station_id)
+
+    return web.json_response(station)
+
+
 @routes.post("/api/station/{station_id}/seed")
 async def add_seed(request):
     data = await request.json()
