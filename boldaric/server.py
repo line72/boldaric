@@ -18,6 +18,9 @@ import hashlib
 import logging
 import random
 
+from pydantic import BaseModel, ValidationError, Field
+from typing import Optional
+
 from pathlib import Path
 
 import boldaric
@@ -41,6 +44,12 @@ THUMBS_DOWN_RATING = -3
 
 routes = web.RouteTableDef()
 
+class CreateStationParams(BaseModel):
+    station_name: str = ''
+    song_id: str = ''
+    replay_song_cooldown: int = Field(default=50)
+    replay_artist_downrank: float = Field(default=0.995)
+    ignore_live: bool = Field(default=False)
 
 def get_next_songs(db, conn, pool, station_options: StationOptions, history: list, played: list[tuple[str, str, bool]], thumbs_downed: list[tuple[str, str, bool]]) -> list[dict]:
     logger = logging.getLogger(__name__)
@@ -169,21 +178,27 @@ async def make_station(request):
     sub_conn = request.app["sub_conn"]
 
     data = await request.json()
-    station_name = data.get("station_name")
-    song_id = data.get("song_id")
 
-    if not station_name:
+    try:
+        params = CreateStationParams(**{
+            k: v for k, v in data.items()
+            if k in CreateStationParams.model_fields
+        })
+    except ValidationError as e:
         return web.json_response(
-            {"error": "Missing parameters `station_name`"}, status=400
+            {"error": e.errors()}, status=400
         )
-    if not song_id:
-        return web.json_response({"error": "Missing parameters `song_id`"}, status=400)
 
-    track = vec_db.get_track(song_id)
+    track = vec_db.get_track(params.song_id)
     if not track:
         return web.json_response({"error": "Invalid `song_id`"}, status=400)
 
-    station_id = station_db.create_station(user["id"], station_name)
+    station_id = station_db.create_station(user["id"], params.station_name)
+    # set properties
+    station_db.set_station_options(station_id,
+                                   params.replay_song_cooldown,
+                                   params.replay_artist_downrank,
+                                   params.ignore_live)
 
     track_features = boldaric.feature_helper.features_to_list(track["features"])
 
@@ -206,7 +221,7 @@ async def make_station(request):
 
     return web.json_response(
         {
-            "station": {"id": station_id, "name": station_name},
+            "station": {"id": station_id, "name": params.station_name},
             "track": {
                 "url": stream_url,
                 "song_id": track["metadata"]["subsonic_id"],
