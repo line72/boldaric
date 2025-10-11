@@ -53,6 +53,13 @@ class CreateStationParams(BaseModel):
     ignore_live: bool = Field(default=False)
 
 
+class UpdateStationParams(BaseModel):
+    station_name: str = ""
+    replay_song_cooldown: int = Field(default=50)
+    replay_artist_downrank: float = Field(default=0.995)
+    ignore_live: bool = Field(default=False)
+
+
 def get_next_songs(
     db,
     conn,
@@ -322,6 +329,33 @@ async def get_station_info(request):
 
     station = request.app["station_db"].get_station(user["id"], station_id)
 
+    return web.json_response(station)
+
+
+@routes.put("/api/station/{station_id}/info")
+async def update_station_info(request):
+    user = request["user"]
+    station_db = request.app["station_db"]
+    station_id = request.match_info["station_id"]
+
+    data = await request.json()
+
+    try:
+        params = UpdateStationParams(
+            **{k: v for k, v in data.items() if k in UpdateStationParams.model_fields}
+        )
+    except ValidationError as e:
+        return web.json_response({"error": e.errors()}, status=400)
+
+    # Update station info
+    station_db.set_station_options(
+        station_id,
+        params.replay_song_cooldown,
+        params.replay_artist_downrank,
+        params.ignore_live,
+    )
+
+    station = station_db.get_station(user["id"], station_id)
     return web.json_response(station)
 
 
