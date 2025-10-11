@@ -44,14 +44,24 @@ THUMBS_DOWN_RATING = -3
 
 routes = web.RouteTableDef()
 
+
 class CreateStationParams(BaseModel):
-    station_name: str = ''
-    song_id: str = ''
+    station_name: str = ""
+    song_id: str = ""
     replay_song_cooldown: int = Field(default=50)
     replay_artist_downrank: float = Field(default=0.995)
     ignore_live: bool = Field(default=False)
 
-def get_next_songs(db, conn, pool, station_options: StationOptions, history: list, played: list[tuple[str, str, bool]], thumbs_downed: list[tuple[str, str, bool]]) -> list[dict]:
+
+def get_next_songs(
+    db,
+    conn,
+    pool,
+    station_options: StationOptions,
+    history: list,
+    played: list[tuple[str, str, bool]],
+    thumbs_downed: list[tuple[str, str, bool]],
+) -> list[dict]:
     logger = logging.getLogger(__name__)
     logger.debug("get_next_song")
 
@@ -180,14 +190,11 @@ async def make_station(request):
     data = await request.json()
 
     try:
-        params = CreateStationParams(**{
-            k: v for k, v in data.items()
-            if k in CreateStationParams.model_fields
-        })
-    except ValidationError as e:
-        return web.json_response(
-            {"error": e.errors()}, status=400
+        params = CreateStationParams(
+            **{k: v for k, v in data.items() if k in CreateStationParams.model_fields}
         )
+    except ValidationError as e:
+        return web.json_response({"error": e.errors()}, status=400)
 
     track = vec_db.get_track(params.song_id)
     if not track:
@@ -195,10 +202,12 @@ async def make_station(request):
 
     station_id = station_db.create_station(user["id"], params.station_name)
     # set properties
-    station_db.set_station_options(station_id,
-                                   params.replay_song_cooldown,
-                                   params.replay_artist_downrank,
-                                   params.ignore_live)
+    station_db.set_station_options(
+        station_id,
+        params.replay_song_cooldown,
+        params.replay_artist_downrank,
+        params.ignore_live,
+    )
 
     track_features = boldaric.feature_helper.features_to_list(track["features"])
 

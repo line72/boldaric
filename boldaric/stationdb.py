@@ -88,9 +88,16 @@ class StationDB:
         """Get all stations for a user."""
         with self._connect() as conn:
             return [
-                {"id": row[0], "name": row[1]}
+                {
+                    "id": row[0],
+                    "name": row[1],
+                    "replay_song_cooldown": row[2],
+                    "replay_artist_downrank": row[3],
+                    "ignore_live": row[4],
+                }
                 for row in conn.execute(
-                    "SELECT id, name FROM stations WHERE user_id = ?", (user_id,)
+                    "SELECT id, name, replay_song_cooldown, replay_artist_downrank, ignore_live FROM stations WHERE user_id = ?",
+                    (user_id,),
                 ).fetchall()
             ]
 
@@ -132,7 +139,7 @@ class StationDB:
         replay_song_cooldown: int,
         replay_artist_downrank: float,
         ignore_live: bool,
-    ) -> None :
+    ) -> None:
         with self._connect() as conn:
             conn.execute(
                 "UPDATE stations SET replay_song_cooldown = ?, replay_artist_downrank = ?, ignore_live = ? WHERE id = ?",
