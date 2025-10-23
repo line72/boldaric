@@ -46,7 +46,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["boldaric"]
+include = ["boldaric*"]
 
 [tool.flake8]
 max-line-length = 88
