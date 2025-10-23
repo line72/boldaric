@@ -48,6 +48,14 @@ include-package-data = true
 where = ["."]
 include = ["boldaric"]
 
+[tool.setuptools.package-data]
+boldaric = [
+    "alembic.ini",
+    "alembic/versions/*.py",
+    "alembic/versions/**/*.py",
+    "models/*"
+]
+
 [tool.flake8]
 max-line-length = 88
 extend-ignore = ["E203", "E501", "W291"]
