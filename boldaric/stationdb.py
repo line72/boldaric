@@ -42,6 +42,11 @@ class StationDB:
         # Run migrations
         with resources.path("boldaric", "alembic.ini") as ini_path:
             alembic_cfg = Config(str(ini_path))
+
+            # Override script_location to be absolute
+            alembic_dir = os.path.join(os.path.dirname(ini_path), "alembic")
+            alembic_cfg.set_main_option("script_location", alembic_dir)
+            
             alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{self.db_path}")
             command.upgrade(alembic_cfg, "head")
 

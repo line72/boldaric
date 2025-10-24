@@ -490,6 +490,11 @@ def initialize_database(db_path):
         # Database exists, stamp it
         with resources.path("boldaric", "alembic.ini") as ini_path:
             alembic_cfg = Config(str(ini_path))
+
+            # Override script_location to be absolute
+            alembic_dir = os.path.join(os.path.dirname(ini_path), "alembic")
+            alembic_cfg.set_main_option("script_location", alembic_dir)
+            
             alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
             command.stamp(alembic_cfg, "initial")
             print(f"Existing database at {db_path} stamped for migrations")
