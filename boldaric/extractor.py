@@ -54,7 +54,9 @@ def extract_features(file_path):
     features["metadata"] = extract_metadata(file_path, audio_file, audio_44_1k)
 
     # Extract basic features
-    bpm, beats, beats_confidence, loudness, dynamic_complexity = extract_basic_features(audio_44_1k)
+    bpm, beats, beats_confidence, loudness, dynamic_complexity = extract_basic_features(
+        audio_44_1k
+    )
     features["bpm"] = bpm
     features["loudness"] = loudness
     features["dynamic_complexity"] = dynamic_complexity
@@ -76,7 +78,9 @@ def extract_features(file_path):
     )
 
     # Extract advanced rhythm features
-    features["groove"] = extract_advanced_rhythm(audio_44_1k, bpm, beats, beats_confidence)
+    features["groove"] = extract_advanced_rhythm(
+        audio_44_1k, bpm, beats, beats_confidence
+    )
 
     # Extract mood predictions
     features["mood"] = extract_mood_predictions(audio_16k)
@@ -170,9 +174,7 @@ def extract_basic_features(audio_44_1k):
     """Extract basic audio features including BPM, loudness, and dynamic complexity."""
     import essentia.standard as es
 
-    bpm, beats, _, _, beats_confidence = es.RhythmExtractor2013()(
-        audio_44_1k
-    )
+    bpm, beats, _, _, beats_confidence = es.RhythmExtractor2013()(audio_44_1k)
     loudness = es.Loudness()(audio_44_1k)
     dynamic_complexity, _ = es.DynamicComplexity()(audio_44_1k)
 
@@ -317,9 +319,7 @@ def extract_advanced_rhythm(audio_44_1k, bpm, beats, beats_confidence):
     danceability, dnc_beats = es.Danceability()(audio_44_1k)
 
     return {
-        "tempo_stability": (
-            float(1 - tempo_variation / bpm) if bpm > 0 else 0.0
-        ),
+        "tempo_stability": (float(1 - tempo_variation / bpm) if bpm > 0 else 0.0),
         "beat_confidence": float(np.mean(beats_confidence)),
         "syncopation": float(syncopation),
         "danceability": float(danceability),
@@ -397,7 +397,9 @@ def extract_genre_predictions(audio_16k):
     return (
         [
             {"label": label, "score": float(score)}
-            for label, score in sorted(zip(labels.labels, scores), key=lambda x: -x[1])[:10]
+            for label, score in sorted(zip(labels.labels, scores), key=lambda x: -x[1])[
+                :10
+            ]
         ],
-        genre_embeddings
+        genre_embeddings,
     )

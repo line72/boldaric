@@ -13,6 +13,8 @@ import pickle
 from typing import Optional
 
 from . import simulator
+from .records.station_options import StationOptions
+
 from alembic import command
 from alembic.config import Config
 import os
@@ -32,9 +34,9 @@ class StationDB:
         # Check if database exists
         if not os.path.exists(self.db_path):
             # Create empty database file
-            with open(self.db_path, 'w') as f:
+            with open(self.db_path, "w") as f:
                 pass
-        
+
         # Run migrations
         alembic_cfg = Config("alembic.ini")
         alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{self.db_path}")
@@ -86,9 +88,16 @@ class StationDB:
         """Get all stations for a user."""
         with self._connect() as conn:
             return [
-                {"id": row[0], "name": row[1]}
+                {
+                    "id": row[0],
+                    "name": row[1],
+                    "replay_song_cooldown": row[2],
+                    "replay_artist_downrank": row[3],
+                    "ignore_live": row[4],
+                }
                 for row in conn.execute(
-                    "SELECT id, name FROM stations WHERE user_id = ?", (user_id,)
+                    "SELECT id, name, replay_song_cooldown, replay_artist_downrank, ignore_live FROM stations WHERE user_id = ?",
+                    (user_id,),
                 ).fetchall()
             ]
 
@@ -101,14 +110,51 @@ class StationDB:
             ).fetchone()
             return row[0] if row else None
 
-    def get_station(self, user_id: int, station_id: str) -> dict:
+    def get_station(self, user_id: int, station_id: str) -> dict | None:
         """Get a station by ID"""
         with self._connect() as conn:
             row = conn.execute(
-                "SELECT id, name FROM stations WHERE user_id = ? AND id = ?",
+                "SELECT id, name, replay_song_cooldown, replay_artist_downrank, ignore_live FROM stations WHERE user_id = ? AND id = ?",
                 (user_id, station_id),
             ).fetchone()
-            return {"id": row[0], "name": row[1]} if row else None
+            return (
+                {
+                    "id": row[0],
+                    "name": row[1],
+                    "replay_song_cooldown": row[2],
+                    "replay_artist_downrank": row[3],
+                    "ignore_live": row[4],
+                }
+                if row
+                else None
+            )
+
+    def get_station_options(self, station_id: int) -> StationOptions:
+        """Get the options for a station"""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT replay_song_cooldown, replay_artist_downrank, ignore_live FROM stations WHERE id = ?",
+                (station_id,),
+            ).fetchone()
+
+            return StationOptions(
+                replay_song_cooldown=row[0],
+                replay_artist_downrank=row[1],
+                ignore_live=row[2],
+            )
+
+    def set_station_options(
+        self,
+        station_id: int,
+        replay_song_cooldown: int,
+        replay_artist_downrank: float,
+        ignore_live: bool,
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE stations SET replay_song_cooldown = ?, replay_artist_downrank = ?, ignore_live = ? WHERE id = ?",
+                (replay_song_cooldown, replay_artist_downrank, ignore_live, station_id),
+            )
 
     def get_station_embedding(self, station_id: int) -> list | None:
         """Get the current embedding for a station."""
