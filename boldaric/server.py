@@ -288,6 +288,9 @@ async def get_next_song_for_station(request):
 
     # grab 3 choices based upon similarity
     def get_random(tracks):
+        if len(tracks) == 0:
+            return None
+        
         choice = random.choices(
             tracks, weights=[item["similarity"] for item in tracks], k=1
         )[0]
@@ -300,6 +303,7 @@ async def get_next_song_for_station(request):
         get_random(next_tracks),
         get_random(next_tracks),
     ]
+    top_tracks = [x for x in top_tracks if x is not None]
 
     if len(top_tracks) > 0:
 
