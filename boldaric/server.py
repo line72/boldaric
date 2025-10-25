@@ -22,6 +22,7 @@ from pydantic import BaseModel, ValidationError, Field
 from typing import Optional
 
 from pathlib import Path
+from importlib import resources
 
 import boldaric
 import boldaric.subsonic
@@ -491,10 +492,16 @@ def initialize_database(db_path):
 
     if db_exists:
         # Database exists, stamp it
-        alembic_cfg = Config("alembic.ini")
-        alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
-        command.stamp(alembic_cfg, "initial")
-        print(f"Existing database at {db_path} stamped for migrations")
+        with resources.path("boldaric", "alembic.ini") as ini_path:
+            alembic_cfg = Config(str(ini_path))
+
+            # Override script_location to be absolute
+            alembic_dir = os.path.join(os.path.dirname(ini_path), "alembic")
+            alembic_cfg.set_main_option("script_location", alembic_dir)
+            
+            alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+            command.stamp(alembic_cfg, "initial")
+            print(f"Existing database at {db_path} stamped for migrations")
     else:
         # Database doesn't exist, create it and run migrations
         # Create database file
@@ -502,10 +509,11 @@ def initialize_database(db_path):
             pass
 
         # Run migrations
-        alembic_cfg = Config("alembic.ini")
-        alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
-        command.upgrade(alembic_cfg, "head")
-        print(f"New database created at {db_path} with migrations applied")
+        with resources.path("boldaric", "alembic.ini") as ini_path:
+            alembic_cfg = Config(str(ini_path))
+            alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
+            command.upgrade(alembic_cfg, "head")
+            print(f"New database created at {db_path} with migrations applied")
 
 
 async def go(db_path, port):

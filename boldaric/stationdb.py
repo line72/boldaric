@@ -12,6 +12,8 @@ import sqlite3
 import pickle
 from typing import Optional
 
+from importlib import resources
+
 from . import simulator
 from .records.station_options import StationOptions
 
@@ -38,9 +40,15 @@ class StationDB:
                 pass
 
         # Run migrations
-        alembic_cfg = Config("alembic.ini")
-        alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{self.db_path}")
-        command.upgrade(alembic_cfg, "head")
+        with resources.path("boldaric", "alembic.ini") as ini_path:
+            alembic_cfg = Config(str(ini_path))
+
+            # Override script_location to be absolute
+            alembic_dir = os.path.join(os.path.dirname(ini_path), "alembic")
+            alembic_cfg.set_main_option("script_location", alembic_dir)
+            
+            alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{self.db_path}")
+            command.upgrade(alembic_cfg, "head")
 
     def _connect(self) -> sqlite3.Connection:
         """Create a new database connection."""
