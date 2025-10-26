@@ -16,6 +16,7 @@ from importlib import resources
 
 from . import simulator
 from .records.station_options import StationOptions
+from .records.track import Track
 
 from alembic import command
 from alembic.config import Config
@@ -52,7 +53,14 @@ class StationDB:
 
     def _connect(self) -> sqlite3.Connection:
         """Create a new database connection."""
-        return sqlite3.connect(self.db_path)
+        connection = sqlite3.connect(self.db_path,
+                                     check_same_thread=False,
+                                     timeout=10.0,
+                                     detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES)
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA journal_mode=WAL;")
+        
+        return connection
 
     # ----------------------
     # User Management
@@ -355,7 +363,7 @@ class StationDB:
     ) -> int:
         with self._connect() as conn:
             cur = conn.execute(
-                "INSERT INTO stations (artist, album, track, track_number, genre, subsonic_id, musicbrainz_artistid, musicbrainz_albumid, musicbrainz_trackid, releasetype, genre_embedding, mfcc_embedding, danceability, tempo_stability, aggressiveness, happiness, partiness, relaxedness, sadness) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO tracks (artist, album, track, track_number, genre, subsonic_id, musicbrainz_artistid, musicbrainz_albumid, musicbrainz_trackid, releasetype, genre_embedding, mfcc_embedding, danceability, tempo_stability, aggressiveness, happiness, partiness, relaxedness, sadness) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     artist,
                     album,
@@ -379,3 +387,37 @@ class StationDB:
                 ),
             )
             return cur.lastrowid
+
+    def get_track_by_subsonic_id(self, subsonic_id: str) -> Track | None:
+        """Get a track based on subsonic id"""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM tracks WHERE subsonic_id = ?", (subsonic_id,)
+            ).fetchone()
+            if row:
+                return Track(
+                    tid=row['id'],
+                    artist=row['artist'],
+                    album=row['album'],
+                    track=row['track'],
+                    track_number=row['track_number'],
+                    genre=row['genre'],
+                    subsonic_id=row['subsonic_id'],
+                    musicbrainz_artistid=row['musicbrainz_artistid'],
+                    musicbrainz_albumid=row['musicbrainz_albumid'],
+                    musicbrainz_trackid=row['musicbrainz_trackid'],
+                    releasetype=row['releasetype'],
+                    genre_embedding = row['genre_embedding'],
+                    mfcc_embedding = row['mfcc_embedding'],
+                    danceability=row['danceability'],
+                    tempo_stability=row['tempo_stability'],
+                    aggressiveness=row['aggressiveness'],
+                    happiness=row['happiness'],
+                    partiness=row['partiness'],
+                    relaxedness=row['relaxedness'],
+                    sadness=row['sadness'],
+                    created_at=row['created_at'],
+                    updated_at=row['updated_at']
+                )
+            else:
+                return None

@@ -1,4 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+from datetime import datetime
 
 @dataclass
 class Track:
@@ -22,5 +24,5 @@ class Track:
     partiness: float = 0.0
     relaxedness: float = 0.0
     sadness: float = 0.0
-    created_at: datetime = None
-    updated_at: datetime = None
+    created_at: datetime = field(default=None)
+    updated_at: datetime = field(default=None)

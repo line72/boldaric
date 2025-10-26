@@ -111,11 +111,15 @@ def song_generator(song_queue, progress_queue, num_workers, artist_names=[]):
             song_queue.put(None)  # Signal that there are no more songs for each worker
 
 
-def process_song(song, conn, db):
+def process_song(song, conn, stationdb, vectordb):
     try:
         # Check if song is in vectordb database by subsonic id
         subsonic_id = song["id"]
-        if db.track_exists(subsonic_id):
+        track = stationdb.get_track_by_subsonic_id(subsonic_id)
+        
+        if track:
+            # !mwd - In the future, we actually want to validate ALL the fields
+            # as it might mean we need to try an process any missing ones
             return {"status": "success", "id": subsonic_id, "path": song["path"]}
 
         # Download the song to a temporary location
@@ -141,13 +145,14 @@ def process_song(song, conn, db):
         }
 
 
-def worker(song_queue, progress_queue):
+def worker(db_name, song_queue, progress_queue):
     conn = boldaric.subsonic.make_from_parameters(
         os.getenv("NAVIDROME_URL"),
         os.getenv("NAVIDROME_USERNAME"),
         os.getenv("NAVIDROME_PASSWORD"),
     )
-    db = boldaric.VectorDB.build_from_http()
+    vectordb = boldaric.VectorDB.build_from_http()
+    stationdb = boldaric.StationDB(db_name)
 
     while True:
         q = song_queue.get()
@@ -155,7 +160,7 @@ def worker(song_queue, progress_queue):
             case None:
                 return
             case ("PROCESS", artist_id, song):
-                result = process_song(song, conn, db)
+                result = process_song(song, conn, stationdb, vectordb)
 
                 # update the progress
                 progress_queue.put(("UPDATE", artist_id, 1))
@@ -261,6 +266,13 @@ def main():
     parser.add_argument(
         "--artist", type=str, action="append", help="Artist name to filter by"
     )
+    parser.add_argument(
+        "-d",
+        "--db-path",
+        default="./db",
+        dest="db_path",
+        help="Path to the station database",
+    )
     args = parser.parse_args()
 
     song_queue = multiprocessing.Queue(maxsize=100)
@@ -273,9 +285,11 @@ def main():
     )
     generator_process.start()
 
+    db_name = os.path.join(args.db_path, "stations.db")
+    
     workers = []
     for _ in range(args.workers):
-        p = multiprocessing.Process(target=worker, args=(song_queue, progress_queue))
+        p = multiprocessing.Process(target=worker, args=(db_name, song_queue, progress_queue))
         p.start()
         workers.append(p)
 
