@@ -22,6 +22,7 @@ import argparse
 import random
 import tempfile
 import unicodedata
+from typing import Any, Dict, List, Union
 
 import multiprocessing
 from queue import Empty
@@ -111,12 +112,33 @@ def song_generator(song_queue, progress_queue, num_workers, artist_names=[]):
             song_queue.put(None)  # Signal that there are no more songs for each worker
 
 
+def get_in(obj: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
+    """
+    Get a nested value from a dictionary using a list of keys.
+
+    Args:
+        obj: The dictionary to search in
+        keys: A list of keys representing the path to the desired value
+        default: The value to return if any key is missing
+
+    Returns:
+        The nested value if all keys exist, otherwise the default value
+    """
+    current = obj
+    for key in keys:
+        if isinstance(current, dict) and key in current:
+            current = current[key]
+        else:
+            return default
+    return current
+
+
 def process_song(song, conn, stationdb, vectordb):
     try:
         # Check if song is in vectordb database by subsonic id
         subsonic_id = song["id"]
         track = stationdb.get_track_by_subsonic_id(subsonic_id)
-        
+
         if track:
             # !mwd - In the future, we actually want to validate ALL the fields
             # as it might mean we need to try an process any missing ones
@@ -129,7 +151,50 @@ def process_song(song, conn, stationdb, vectordb):
             temp_file.flush()
 
             features = boldaric.extractor.extract_features(temp_file.name)
-            db.add_track(subsonic_id, features)
+            # db.add_track(subsonic_id, features)
+            stationdb.add_track(
+                artist=get_in(features, ["metadata", "artist"], ""),
+                album=get_in(features, ["metadata", "album"], ""),
+                track=get_in(features, ["metadata", "title"], ""),
+                track_number=get_in(features, ["metadata", "tracknumber"], 0),
+                genre=";".join(get_in(features, ["metadata", "genre"], [])),
+                subsonic_id=subsonic_id,
+                musicbrainz_artistid=get_in(features, ["metadata", "musicbrainz_artistid"], ""),
+                musicbrainz_albumid=get_in(features, ["metadata", "musicbrainz_releasegroupid"], ""),
+                musicbrainz_trackid=get_in(features, ["metadata", "musicbrainz_releasetrackid"], ""),
+                releasetype=get_in(features, ["metadata", "releasetype"], ""),
+                genre_embedding=get_in(features, ["genre_embeddings"], []),
+                mfcc_covariance=get_in(features, ["mfcc", "covariance"], []),
+                mfcc_mean=get_in(features, ["mfcc", "mean"], []),
+                mfcc_temporal_variation=get_in(features, ["mfcc", "temporal_variation"], 0.0),
+                bpm=get_in(features, ["bpm"], 0.0),
+                loudness=get_in(features, ["loudness"], 0.0),
+                dynamic_complexity=get_in(features, ["dynamic_complexity"], 0.0),
+                energy_curve_mean=get_in(features, ["energy_curve", "mean"], 0.0),
+                energy_curve_std=get_in(features, ["energy_curve", "std"], 0.0),
+                energy_curve_peak_count=get_in(features, ["energy_curve", "peak_count"], 0),
+                key_tonic=get_in(features, ["key", "tonic"], ""),
+                key_scale=get_in(features, ["key", "scale"], ""),
+                key_confidence=get_in(features, ["key", "confidence"], 0.0),
+                chord_unique_chords=get_in(features, ["chord_stability", "unique_chords"], 0),
+                chord_change_rate=get_in(features, ["chord_stability", "change_rate"], 0.0),
+                vocal_pitch_presence_ratio=get_in(features, ["vocal", "pitch_presence_ratio"], 0.0),
+                vocal_pitch_segment_count=get_in(features, ["vocal", "pitch_segment_count"], 0),
+                vocal_avg_pitch_duration=get_in(features, ["vocal", "avg_pitch_duration"], 0.0),
+                groove_beat_consistency=get_in(features, ["groove", "beat_consistency"], 0.0),
+                groove_danceability=get_in(features, ["groove", "danceability"], 0.0),
+                groove_dnc_bpm=get_in(features, ["groove", "dnc_bpm"], 0.0),
+                groove_syncopation=get_in(features, ["groove", "syncopation"], 0.0),
+                groove_tempo_stability=get_in(features, ["groove", "tempo_stability"], 0.0),
+                mood_aggressiveness=get_in(features, ["mood", "probabilities", "aggressive"], 0.0),
+                mood_happiness=get_in(features, ["mood", "probabilities", "happy"], 0.0),
+                mood_partiness=get_in(features, ["mood", "probabilities", "party"], 0.0),
+                mood_relaxedness=get_in(features, ["mood", "probabilities", "relaxed"], 0.0),
+                mood_sadness=get_in(features, ["mood", "probabilities", "sad"], 0.0),
+                spectral_character_brightness=get_in(features, ["spectral_character", "brightness"], 0.0),
+                spectral_character_contrast_mean=get_in(features, ["spectral_character", "contrast_mean"], 0.0),
+                spectral_character_valley_std=get_in(features, ["spectral_character", "valley_std"], 0.0),
+            )
 
         return {"status": "success", "id": subsonic_id, "path": song["path"]}
     except Exception as e:
@@ -286,10 +351,12 @@ def main():
     generator_process.start()
 
     db_name = os.path.join(args.db_path, "stations.db")
-    
+
     workers = []
     for _ in range(args.workers):
-        p = multiprocessing.Process(target=worker, args=(db_name, song_queue, progress_queue))
+        p = multiprocessing.Process(
+            target=worker, args=(db_name, song_queue, progress_queue)
+        )
         p.start()
         workers.append(p)
 
