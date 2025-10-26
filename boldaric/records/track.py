@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Union
 from datetime import datetime
+import numpy as np
 
 
 @dataclass
@@ -16,9 +17,9 @@ class Track:
     musicbrainz_albumid: str = ""
     musicbrainz_trackid: str = ""
     releasetype: str = ""
-    genre_embedding: Optional[List[float]] = None
-    mfcc_covariance: Optional[List[List[float]]] = None
-    mfcc_mean: Optional[List[float]] = None
+    genre_embedding: Optional[bytes] = None
+    mfcc_covariance: Optional[bytes] = None
+    mfcc_mean: Optional[bytes] = None
     mfcc_temporal_variation: float = 0.0
     bpm: float = 0.0
     loudness: float = 0.0

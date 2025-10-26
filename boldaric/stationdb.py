@@ -11,6 +11,7 @@
 import sqlite3
 import pickle
 from typing import Optional
+import numpy as np
 
 from importlib import resources
 
@@ -385,6 +386,18 @@ class StationDB:
         spectral_character_contrast_mean: float,
         spectral_character_valley_std: float,
     ) -> int:
+        # Convert lists to numpy arrays and serialize as binary data
+        def serialize_array(arr):
+            if arr is None:
+                return None
+            if isinstance(arr, list):
+                arr = np.array(arr)
+            return arr.tobytes()
+        
+        genre_embedding_bytes = serialize_array(genre_embedding)
+        mfcc_covariance_bytes = serialize_array(mfcc_covariance)
+        mfcc_mean_bytes = serialize_array(mfcc_mean)
+        
         with self._connect() as conn:
             cur = conn.execute(
                 "INSERT INTO tracks (artist, album, track, track_number, genre, subsonic_id, musicbrainz_artistid, musicbrainz_albumid, musicbrainz_trackid, releasetype, genre_embedding, mfcc_covariance, mfcc_mean, mfcc_temporal_variation, bpm, loudness, dynamic_complexity, energy_curve_mean, energy_curve_std, energy_curve_peak_count, key_tonic, key_scale, key_confidence, chord_unique_chords, chord_change_rate, vocal_pitch_presence_ratio, vocal_pitch_segment_count, vocal_avg_pitch_duration, groove_beat_consistency, groove_danceability, groove_dnc_bpm, groove_syncopation, groove_tempo_stability, mood_aggressiveness, mood_happiness, mood_partiness, mood_relaxedness, mood_sadness, spectral_character_brightness, spectral_character_contrast_mean, spectral_character_valley_std) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -399,9 +412,9 @@ class StationDB:
                     musicbrainz_albumid,
                     musicbrainz_trackid,
                     releasetype,
-                    genre_embedding,
-                    mfcc_covariance,
-                    mfcc_mean,
+                    genre_embedding_bytes,
+                    mfcc_covariance_bytes,
+                    mfcc_mean_bytes,
                     mfcc_temporal_variation,
                     bpm,
                     loudness,
