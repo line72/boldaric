@@ -46,7 +46,7 @@ class StationDB:
             # Override script_location to be absolute
             alembic_dir = os.path.join(os.path.dirname(ini_path), "alembic")
             alembic_cfg.set_main_option("script_location", alembic_dir)
-            
+
             alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{self.db_path}")
             command.upgrade(alembic_cfg, "head")
 
@@ -327,3 +327,55 @@ class StationDB:
             ]
 
         return history, tracks, thumbs_downed
+
+    # ----------------------
+    # Track Management
+    # ----------------------
+    def add_track(
+        self,
+        artist: str,
+        album: str,
+        track: str,
+        track_number: int,
+        genre: str,
+        subsonic_id: str,
+        musicbrainz_artistid: str,
+        musicbrainz_albumid: str,
+        musicbrainz_trackid: str,
+        releasetype: str,
+        genre_embedding,
+        mfcc_embedding,
+        danceability: float,
+        tempo_stability: float,
+        aggressiveness: float,
+        happiness: float,
+        partiness: float,
+        relaxedness: float,
+        sadness: float,
+    ) -> int:
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO stations (artist, album, track, track_number, genre, subsonic_id, musicbrainz_artistid, musicbrainz_albumid, musicbrainz_trackid, releasetype, genre_embedding, mfcc_embedding, danceability, tempo_stability, aggressiveness, happiness, partiness, relaxedness, sadness) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    artist,
+                    album,
+                    track,
+                    track_number,
+                    genre,
+                    subsonic_id,
+                    musicbrainz_artistid,
+                    musicbrainz_albumid,
+                    musicbrainz_trackid,
+                    releasetype,
+                    genre_embedding,
+                    mfcc_embedding,
+                    danceability,
+                    tempo_stability,
+                    aggressiveness,
+                    happiness,
+                    partiness,
+                    relaxedness,
+                    sadness,
+                ),
+            )
+            return cur.lastrowid
