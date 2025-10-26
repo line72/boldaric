@@ -11,6 +11,7 @@
 import sqlite3
 import pickle
 from typing import Optional
+from datetime import datetime
 import numpy as np
 
 from importlib import resources
@@ -398,9 +399,12 @@ class StationDB:
         mfcc_covariance_bytes = serialize_array(mfcc_covariance)
         mfcc_mean_bytes = serialize_array(mfcc_mean)
         
+        # Get current timestamp
+        now = datetime.now()
+        
         with self._connect() as conn:
             cur = conn.execute(
-                "INSERT INTO tracks (artist, album, track, track_number, genre, subsonic_id, musicbrainz_artistid, musicbrainz_albumid, musicbrainz_trackid, releasetype, genre_embedding, mfcc_covariance, mfcc_mean, mfcc_temporal_variation, bpm, loudness, dynamic_complexity, energy_curve_mean, energy_curve_std, energy_curve_peak_count, key_tonic, key_scale, key_confidence, chord_unique_chords, chord_change_rate, vocal_pitch_presence_ratio, vocal_pitch_segment_count, vocal_avg_pitch_duration, groove_beat_consistency, groove_danceability, groove_dnc_bpm, groove_syncopation, groove_tempo_stability, mood_aggressiveness, mood_happiness, mood_partiness, mood_relaxedness, mood_sadness, spectral_character_brightness, spectral_character_contrast_mean, spectral_character_valley_std) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO tracks (artist, album, track, track_number, genre, subsonic_id, musicbrainz_artistid, musicbrainz_albumid, musicbrainz_trackid, releasetype, genre_embedding, mfcc_covariance, mfcc_mean, mfcc_temporal_variation, bpm, loudness, dynamic_complexity, energy_curve_mean, energy_curve_std, energy_curve_peak_count, key_tonic, key_scale, key_confidence, chord_unique_chords, chord_change_rate, vocal_pitch_presence_ratio, vocal_pitch_segment_count, vocal_avg_pitch_duration, groove_beat_consistency, groove_danceability, groove_dnc_bpm, groove_syncopation, groove_tempo_stability, mood_aggressiveness, mood_happiness, mood_partiness, mood_relaxedness, mood_sadness, spectral_character_brightness, spectral_character_contrast_mean, spectral_character_valley_std, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     artist,
                     album,
@@ -443,6 +447,8 @@ class StationDB:
                     spectral_character_brightness,
                     spectral_character_contrast_mean,
                     spectral_character_valley_std,
+                    now,  # created_at
+                    now,  # updated_at
                 ),
             )
             return cur.lastrowid
