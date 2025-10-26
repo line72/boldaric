@@ -1,23 +1,24 @@
 from dataclasses import dataclass, field
-
+from typing import List, Optional
 from datetime import datetime
+
 
 @dataclass
 class Track:
     tid: int = 0
-    artist: str = ''
-    album: str = ''
-    track: str = ''
+    artist: str = ""
+    album: str = ""
+    track: str = ""
     track_number: int = 0
-    genre: str = ''
-    subsonic_id: str = ''
-    musicbrainz_artistid: str = ''
-    musicbrainz_albumid: str = ''
-    musicbrainz_trackid: str = ''
-    releasetype: str = ''
-    genre_embedding = None
-    mfcc_covariance = None
-    mfcc_mean = None
+    genre: str = ""
+    subsonic_id: str = ""
+    musicbrainz_artistid: str = ""
+    musicbrainz_albumid: str = ""
+    musicbrainz_trackid: str = ""
+    releasetype: str = ""
+    genre_embedding: Optional[List[float]] = None
+    mfcc_covariance: Optional[List[List[float]]] = None
+    mfcc_mean: Optional[List[float]] = None
     mfcc_temporal_variation: float = 0.0
     bpm: float = 0.0
     loudness: float = 0.0
@@ -25,8 +26,8 @@ class Track:
     energy_curve_mean: float = 0.0
     energy_curve_std: float = 0.0
     energy_curve_peak_count: int = 0
-    key_tonic: str = ''
-    key_scale: str = ''
+    key_tonic: str = ""
+    key_scale: str = ""
     key_confidence: float = 0.0
     chord_unique_chords: int = 0
     chord_change_rate: float = 0.0
@@ -46,5 +47,5 @@ class Track:
     spectral_character_brightness: float = 0.0
     spectral_character_contrast_mean: float = 0.0
     spectral_character_valley_std: float = 0.0
-    created_at: datetime = field(default=None)
-    updated_at: datetime = field(default=None)
+    created_at: datetime = field(default_factory=datetime.now)
+    updated_at: datetime = field(default_factory=datetime.now)
