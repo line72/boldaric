@@ -116,6 +116,8 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
         "musicbrainz_artistid": ["MUSICBRAINZ_ARTISTID"],
         "musicbrainz_releasegroupid": ["MUSICBRAINZ_RELEASEGROUPID"],
         "musicbrainz_workid": ["MUSICBRAINZ_WORKID"],
+        "tracknumber": ["TRCK", "trkn", "TRACKNUMBER"],
+        "releasetype": ["MusicBrainz Album Type", "RELEASETYPE", "MUSICBRAINZ_ALBUMTYPE"],
     }
 
     if hasattr(audio_file, "tags"):
@@ -143,6 +145,17 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
                                     tags[field] = min(rating_val / 255, 1.0)
                             except (ValueError, TypeError):
                                 tags[field] = 0.0
+                        elif field == "tracknumber":
+                            # Handle track number parsing
+                            try:
+                                # Handle formats like "1/10" or just "1"
+                                if isinstance(value, str) and "/" in value:
+                                    track_num = value.split("/")[0]
+                                    tags[field] = int(track_num)
+                                else:
+                                    tags[field] = int(value)
+                            except (ValueError, TypeError):
+                                tags[field] = 0
                         else:
                             # Handle MusicBrainz ReleaseTrackID UFID format
                             if field == "musicbrainz_releasetrackid" and hasattr(
@@ -166,6 +179,12 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
     # Try to get more precise duration from file metadata if available
     if hasattr(audio_file, "info") and hasattr(audio_file.info, "length"):
         tags["duration"] = audio_file.info.length
+
+    # Set default values for tracknumber and releasetype if not found
+    if "tracknumber" not in tags:
+        tags["tracknumber"] = 0
+    if "releasetype" not in tags:
+        tags["releasetype"] = ""
 
     return tags
 

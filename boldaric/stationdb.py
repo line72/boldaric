@@ -11,11 +11,14 @@
 import sqlite3
 import pickle
 from typing import Optional
+from datetime import datetime
+import numpy as np
 
 from importlib import resources
 
 from . import simulator
 from .records.station_options import StationOptions
+from .records.track import Track
 
 from alembic import command
 from alembic.config import Config
@@ -46,13 +49,22 @@ class StationDB:
             # Override script_location to be absolute
             alembic_dir = os.path.join(os.path.dirname(ini_path), "alembic")
             alembic_cfg.set_main_option("script_location", alembic_dir)
-            
+
             alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{self.db_path}")
             command.upgrade(alembic_cfg, "head")
 
     def _connect(self) -> sqlite3.Connection:
         """Create a new database connection."""
-        return sqlite3.connect(self.db_path)
+        connection = sqlite3.connect(
+            self.db_path,
+            check_same_thread=False,
+            timeout=10.0,
+            detect_types=sqlite3.PARSE_DECLTYPES | sqlite3.PARSE_COLNAMES,
+        )
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA journal_mode=WAL;")
+
+        return connection
 
     # ----------------------
     # User Management
@@ -327,3 +339,189 @@ class StationDB:
             ]
 
         return history, tracks, thumbs_downed
+
+    # ----------------------
+    # Track Management
+    # ----------------------
+    def add_track(
+        self,
+        artist: str,
+        album: str,
+        track: str,
+        track_number: int,
+        genre: str,
+        subsonic_id: str,
+        musicbrainz_artistid: str,
+        musicbrainz_albumid: str,
+        musicbrainz_trackid: str,
+        releasetype: str,
+        genre_embedding,
+        mfcc_covariance,
+        mfcc_mean,
+        mfcc_temporal_variation: float,
+        bpm: float,
+        loudness: float,
+        dynamic_complexity: float,
+        energy_curve_mean: float,
+        energy_curve_std: float,
+        energy_curve_peak_count: int,
+        key_tonic: str,
+        key_scale: str,
+        key_confidence: float,
+        chord_unique_chords: int,
+        chord_change_rate: float,
+        vocal_pitch_presence_ratio: float,
+        vocal_pitch_segment_count: int,
+        vocal_avg_pitch_duration: float,
+        groove_beat_consistency: float,
+        groove_danceability: float,
+        groove_dnc_bpm: float,
+        groove_syncopation: float,
+        groove_tempo_stability: float,
+        mood_aggressiveness: float,
+        mood_happiness: float,
+        mood_partiness: float,
+        mood_relaxedness: float,
+        mood_sadness: float,
+        spectral_character_brightness: float,
+        spectral_character_contrast_mean: float,
+        spectral_character_valley_std: float,
+    ) -> int:
+        # Convert lists to numpy arrays and serialize as binary data
+        def serialize_array(arr):
+            if arr is None:
+                return None
+            if isinstance(arr, list):
+                arr = np.array(arr)
+            return arr.tobytes()
+        
+        genre_embedding_bytes = serialize_array(genre_embedding)
+        mfcc_covariance_bytes = serialize_array(mfcc_covariance)
+        mfcc_mean_bytes = serialize_array(mfcc_mean)
+        
+        # Get current timestamp
+        now = datetime.now()
+        
+        with self._connect() as conn:
+            cur = conn.execute(
+                "INSERT INTO tracks (artist, album, track, track_number, genre, subsonic_id, musicbrainz_artistid, musicbrainz_albumid, musicbrainz_trackid, releasetype, genre_embedding, mfcc_covariance, mfcc_mean, mfcc_temporal_variation, bpm, loudness, dynamic_complexity, energy_curve_mean, energy_curve_std, energy_curve_peak_count, key_tonic, key_scale, key_confidence, chord_unique_chords, chord_change_rate, vocal_pitch_presence_ratio, vocal_pitch_segment_count, vocal_avg_pitch_duration, groove_beat_consistency, groove_danceability, groove_dnc_bpm, groove_syncopation, groove_tempo_stability, mood_aggressiveness, mood_happiness, mood_partiness, mood_relaxedness, mood_sadness, spectral_character_brightness, spectral_character_contrast_mean, spectral_character_valley_std, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    artist,
+                    album,
+                    track,
+                    track_number,
+                    genre,
+                    subsonic_id,
+                    musicbrainz_artistid,
+                    musicbrainz_albumid,
+                    musicbrainz_trackid,
+                    releasetype,
+                    genre_embedding_bytes,
+                    mfcc_covariance_bytes,
+                    mfcc_mean_bytes,
+                    mfcc_temporal_variation,
+                    bpm,
+                    loudness,
+                    dynamic_complexity,
+                    energy_curve_mean,
+                    energy_curve_std,
+                    energy_curve_peak_count,
+                    key_tonic,
+                    key_scale,
+                    key_confidence,
+                    chord_unique_chords,
+                    chord_change_rate,
+                    vocal_pitch_presence_ratio,
+                    vocal_pitch_segment_count,
+                    vocal_avg_pitch_duration,
+                    groove_beat_consistency,
+                    groove_danceability,
+                    groove_dnc_bpm,
+                    groove_syncopation,
+                    groove_tempo_stability,
+                    mood_aggressiveness,
+                    mood_happiness,
+                    mood_partiness,
+                    mood_relaxedness,
+                    mood_sadness,
+                    spectral_character_brightness,
+                    spectral_character_contrast_mean,
+                    spectral_character_valley_std,
+                    now,  # created_at
+                    now,  # updated_at
+                ),
+            )
+            return cur.lastrowid
+
+    def get_track_by_subsonic_id(self, subsonic_id: str) -> Track | None:
+        """Get a track based on subsonic id"""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM tracks WHERE subsonic_id = ?", (subsonic_id,)
+            ).fetchone()
+            if row:
+                # Deserialize binary data back to numpy arrays
+                def deserialize_array(binary_data, shape=None):
+                    """Deserialize binary data back to numpy array"""
+                    if binary_data is None:
+                        return None
+                    arr = np.frombuffer(binary_data, dtype=np.float64)
+                    if shape:
+                        arr = arr.reshape(shape)
+                    return arr
+
+                # Deserialize the binary fields
+                genre_embedding_array = deserialize_array(row["genre_embedding"])
+                mfcc_mean_array = deserialize_array(row["mfcc_mean"])
+                mfcc_covariance_array = deserialize_array(row["mfcc_covariance"], (13, 13))
+
+                track = Track(
+                    tid=row["id"],
+                    artist=row["artist"],
+                    album=row["album"],
+                    track=row["track"],
+                    track_number=row["track_number"],
+                    genre=row["genre"],
+                    subsonic_id=row["subsonic_id"],
+                    musicbrainz_artistid=row["musicbrainz_artistid"],
+                    musicbrainz_albumid=row["musicbrainz_albumid"],
+                    musicbrainz_trackid=row["musicbrainz_trackid"],
+                    releasetype=row["releasetype"],
+                    genre_embedding=genre_embedding_array,
+                    mfcc_covariance=mfcc_covariance_array,
+                    mfcc_mean=mfcc_mean_array,
+                    mfcc_temporal_variation=row["mfcc_temporal_variation"],
+                    bpm=row["bpm"],
+                    loudness=row["loudness"],
+                    dynamic_complexity=row["dynamic_complexity"],
+                    energy_curve_mean=row["energy_curve_mean"],
+                    energy_curve_std=row["energy_curve_std"],
+                    energy_curve_peak_count=row["energy_curve_peak_count"],
+                    key_tonic=row["key_tonic"],
+                    key_scale=row["key_scale"],
+                    key_confidence=row["key_confidence"],
+                    chord_unique_chords=row["chord_unique_chords"],
+                    chord_change_rate=row["chord_change_rate"],
+                    vocal_pitch_presence_ratio=row["vocal_pitch_presence_ratio"],
+                    vocal_pitch_segment_count=row["vocal_pitch_segment_count"],
+                    vocal_avg_pitch_duration=row["vocal_avg_pitch_duration"],
+                    groove_beat_consistency=row["groove_beat_consistency"],
+                    groove_danceability=row["groove_danceability"],
+                    groove_dnc_bpm=row["groove_dnc_bpm"],
+                    groove_syncopation=row["groove_syncopation"],
+                    groove_tempo_stability=row["groove_tempo_stability"],
+                    mood_aggressiveness=row["mood_aggressiveness"],
+                    mood_happiness=row["mood_happiness"],
+                    mood_partiness=row["mood_partiness"],
+                    mood_relaxedness=row["mood_relaxedness"],
+                    mood_sadness=row["mood_sadness"],
+                    spectral_character_brightness=row["spectral_character_brightness"],
+                    spectral_character_contrast_mean=row["spectral_character_contrast_mean"],
+                    spectral_character_valley_std=row["spectral_character_valley_std"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"],
+                )
+                
+                return track
+            else:
+                return None

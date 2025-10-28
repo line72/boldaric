@@ -290,7 +290,7 @@ async def get_next_song_for_station(request):
     def get_random(tracks):
         if len(tracks) == 0:
             return None
-        
+
         choice = random.choices(
             tracks, weights=[item["similarity"] for item in tracks], k=1
         )[0]
@@ -498,7 +498,7 @@ def initialize_database(db_path):
             # Override script_location to be absolute
             alembic_dir = os.path.join(os.path.dirname(ini_path), "alembic")
             alembic_cfg.set_main_option("script_location", alembic_dir)
-            
+
             alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
             command.stamp(alembic_cfg, "initial")
             print(f"Existing database at {db_path} stamped for migrations")
