@@ -460,7 +460,22 @@ class StationDB:
                 "SELECT * FROM tracks WHERE subsonic_id = ?", (subsonic_id,)
             ).fetchone()
             if row:
-                return Track(
+                # Deserialize binary data back to numpy arrays
+                def deserialize_array(binary_data, shape=None):
+                    """Deserialize binary data back to numpy array"""
+                    if binary_data is None:
+                        return None
+                    arr = np.frombuffer(binary_data, dtype=np.float64)
+                    if shape:
+                        arr = arr.reshape(shape)
+                    return arr
+
+                # Deserialize the binary fields
+                genre_embedding_array = deserialize_array(row["genre_embedding"])
+                mfcc_mean_array = deserialize_array(row["mfcc_mean"])
+                mfcc_covariance_array = deserialize_array(row["mfcc_covariance"], (13, 13))
+
+                track = Track(
                     tid=row["id"],
                     artist=row["artist"],
                     album=row["album"],
@@ -472,9 +487,9 @@ class StationDB:
                     musicbrainz_albumid=row["musicbrainz_albumid"],
                     musicbrainz_trackid=row["musicbrainz_trackid"],
                     releasetype=row["releasetype"],
-                    genre_embedding=row["genre_embedding"],
-                    mfcc_covariance=row["mfcc_covariance"],
-                    mfcc_mean=row["mfcc_mean"],
+                    genre_embedding=genre_embedding_array,
+                    mfcc_covariance=mfcc_covariance_array,
+                    mfcc_mean=mfcc_mean_array,
                     mfcc_temporal_variation=row["mfcc_temporal_variation"],
                     bpm=row["bpm"],
                     loudness=row["loudness"],
@@ -506,5 +521,7 @@ class StationDB:
                     created_at=row["created_at"],
                     updated_at=row["updated_at"],
                 )
+                
+                return track
             else:
                 return None
