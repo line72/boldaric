@@ -1,4 +1,6 @@
 from dataclasses import dataclass
+from sqlalchemy import Column, Integer, Float, Boolean
+from sqlalchemy.ext.declarative import declarative_base
 
 
 @dataclass
