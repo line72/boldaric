@@ -1,3 +1,6 @@
+2025-10-28  Marcus Dillavou  <line72@line72.net>
+	* BOL-23 - Switch to SQLAlchemy
+
 0.9.1
 ==========
 2025-10-25  Marcus Dillavou  <line72@line72.net>
