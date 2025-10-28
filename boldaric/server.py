@@ -55,7 +55,6 @@ class CreateStationParams(BaseModel):
 
 
 class UpdateStationParams(BaseModel):
-    station_name: str = ""
     replay_song_cooldown: int = Field(default=50)
     replay_artist_downrank: float = Field(default=0.995)
     ignore_live: bool = Field(default=False)
@@ -375,7 +374,7 @@ async def update_station_info(request):
     except ValidationError as e:
         return web.json_response({"error": e.errors()}, status=400)
 
-    # Update station info
+    # Update station options
     station_db.set_station_options(
         station_id,
         params.replay_song_cooldown,
@@ -383,6 +382,7 @@ async def update_station_info(request):
         params.ignore_live,
     )
 
+    # Get updated station to return current values
     station = station_db.get_station(user["id"], station_id)
     if station:
         station_dict = {
