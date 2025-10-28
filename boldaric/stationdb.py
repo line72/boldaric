@@ -242,7 +242,7 @@ class StationDB:
                         EmbeddingHistory.created_at >= thirty_minutes_ago,
                         EmbeddingHistory.id == session.query(
                             func.max(EmbeddingHistory.id)
-                        ).filter(EmbeddingHistory.station_id == station_id)
+                        ).filter(EmbeddingHistory.station_id == station_id).scalar_subquery()
                     )
                 )
             ).order_by(EmbeddingHistory.created_at.desc()).first()
@@ -280,7 +280,9 @@ class StationDB:
         # Build history from embeddings
         history = simulator.make_history()
         for embedding in embeddings:
-            history = simulator.add_history(history, embedding.embedding, embedding.rating)
+            # Check that embedding has the right dimension (148)
+            if len(embedding.embedding) == 148:
+                history = simulator.add_history(history, embedding.embedding, embedding.rating)
 
         # Build thumbs downed from track history
         thumbs_downed = []
