@@ -591,7 +591,6 @@ def initialize_database(db_path):
     """Initialize database for Alembic migrations."""
     from alembic import command
     from alembic.config import Config
-    import sqlite3
 
     # Check if database exists
     db_exists = os.path.exists(db_path)
