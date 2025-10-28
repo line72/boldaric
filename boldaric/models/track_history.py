@@ -6,10 +6,10 @@ from . import Base
 
 
 class TrackHistory(Base):
-    __tablename__ = 'track_history'
-    
+    __tablename__ = "track_history"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
-    station_id = Column(Integer, ForeignKey('stations.id'), nullable=False)
+    station_id = Column(Integer, ForeignKey("stations.id"), nullable=False)
     subsonic_id = Column(String, nullable=False)
     artist = Column(String, nullable=False)
     title = Column(String, nullable=False)
@@ -17,6 +17,6 @@ class TrackHistory(Base):
     is_thumbs_downed = Column(Boolean, default=False)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    
+
     # Relationships
     station = relationship("Station", back_populates="track_history")

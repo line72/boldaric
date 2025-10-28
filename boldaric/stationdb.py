@@ -39,7 +39,7 @@ class StationDB:
     def __init__(self, db_path: str = "stations.db"):
         self.db_path = db_path
         self._run_migrations()
-        
+
         # Set up SQLAlchemy engine and session
         self.engine = create_engine(f"sqlite:///{db_path}")
         self.Session = sessionmaker(bind=self.engine)
@@ -59,7 +59,9 @@ class StationDB:
         # Override script_location to be absolute
         alembic_dir = os.path.join(os.path.dirname(alembic_ini_path), "alembic")
         alembic_cfg.set_main_option("script_location", alembic_dir)
-        alembic_cfg.set_main_option("path_separator", os.pathsep)  # Fix for Alembic warning
+        alembic_cfg.set_main_option(
+            "path_separator", os.pathsep
+        )  # Fix for Alembic warning
         alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{self.db_path}")
         command.upgrade(alembic_cfg, "head")
 
@@ -104,19 +106,21 @@ class StationDB:
     def get_station_id(self, user_id: int, station_name: str) -> Optional[int]:
         """Get a station ID by user ID and station name."""
         with self.Session() as session:
-            station = session.query(Station).filter(
-                Station.user_id == user_id,
-                Station.name == station_name
-            ).first()
+            station = (
+                session.query(Station)
+                .filter(Station.user_id == user_id, Station.name == station_name)
+                .first()
+            )
             return station.id if station else None
 
     def get_station(self, user_id: int, station_id: str) -> Optional[Station]:
         """Get a station by ID"""
         with self.Session() as session:
-            return session.query(Station).filter(
-                Station.user_id == user_id,
-                Station.id == station_id
-            ).first()
+            return (
+                session.query(Station)
+                .filter(Station.user_id == user_id, Station.id == station_id)
+                .first()
+            )
 
     def get_station_options(self, station_id: int) -> StationOptions:
         """Get the options for a station"""
@@ -178,10 +182,14 @@ class StationDB:
         """Add a track to the station's history. If it is recent, update the existing row"""
         with self.Session() as session:
             # Check if track already exists in history
-            track_history = session.query(TrackHistory).filter(
-                TrackHistory.station_id == station_id,
-                TrackHistory.subsonic_id == subsonic_id
-            ).first()
+            track_history = (
+                session.query(TrackHistory)
+                .filter(
+                    TrackHistory.station_id == station_id,
+                    TrackHistory.subsonic_id == subsonic_id,
+                )
+                .first()
+            )
 
             if track_history:
                 # Update existing record
@@ -199,33 +207,44 @@ class StationDB:
                     artist=artist,
                     title=title,
                     album=album,
-                    is_thumbs_downed=is_thumbs_downed
+                    is_thumbs_downed=is_thumbs_downed,
                 )
                 session.add(track_history)
                 session.commit()
                 return track_history.id
 
-    def get_track_history(
-        self, station_id: int, limit: int = 20
-    ) -> List[TrackHistory]:
+    def get_track_history(self, station_id: int, limit: int = 20) -> List[TrackHistory]:
         """Get recent tracks played by a station."""
         with self.Session() as session:
-            return session.query(TrackHistory).filter(
-                TrackHistory.station_id == station_id
-            ).order_by(TrackHistory.updated_at.desc()).limit(limit).all()
+            return (
+                session.query(TrackHistory)
+                .filter(TrackHistory.station_id == station_id)
+                .order_by(TrackHistory.updated_at.desc())
+                .limit(limit)
+                .all()
+            )
 
     def get_thumbs_downed_history(self, station_id: int) -> List[TrackHistory]:
         """Get all thumbs downed tracks by a station."""
         with self.Session() as session:
-            return session.query(TrackHistory).filter(
-                and_(
-                    TrackHistory.station_id == station_id,
-                    TrackHistory.is_thumbs_downed == True
+            return (
+                session.query(TrackHistory)
+                .filter(
+                    and_(
+                        TrackHistory.station_id == station_id,
+                        TrackHistory.is_thumbs_downed == True,
+                    )
                 )
-            ).order_by(TrackHistory.updated_at).all()
+                .order_by(TrackHistory.updated_at)
+                .all()
+            )
 
     def add_embedding_history(
-        self, station_id: int, track_history_id: int, embedding: List[float], rating: int
+        self,
+        station_id: int,
+        track_history_id: int,
+        embedding: List[float],
+        rating: int,
     ) -> None:
         """Add an embedding to the station's history."""
         with self.Session() as session:
@@ -233,19 +252,25 @@ class StationDB:
             # AND were created in the previous 30 minutes OR is the
             # most recent embedding for this station
             thirty_minutes_ago = datetime.now() - timedelta(minutes=30)
-            
-            recent_embedding = session.query(EmbeddingHistory).filter(
-                and_(
-                    EmbeddingHistory.station_id == station_id,
-                    EmbeddingHistory.track_history_id == track_history_id,
-                    or_(
-                        EmbeddingHistory.created_at >= thirty_minutes_ago,
-                        EmbeddingHistory.id == session.query(
-                            func.max(EmbeddingHistory.id)
-                        ).filter(EmbeddingHistory.station_id == station_id).scalar_subquery()
+
+            recent_embedding = (
+                session.query(EmbeddingHistory)
+                .filter(
+                    and_(
+                        EmbeddingHistory.station_id == station_id,
+                        EmbeddingHistory.track_history_id == track_history_id,
+                        or_(
+                            EmbeddingHistory.created_at >= thirty_minutes_ago,
+                            EmbeddingHistory.id
+                            == session.query(func.max(EmbeddingHistory.id))
+                            .filter(EmbeddingHistory.station_id == station_id)
+                            .scalar_subquery(),
+                        ),
                     )
                 )
-            ).order_by(EmbeddingHistory.created_at.desc()).first()
+                .order_by(EmbeddingHistory.created_at.desc())
+                .first()
+            )
 
             # we have a recent embedding, if this was created in the last 30 minutes,
             # then just update it instead of creating a second one. Likely, the client
@@ -259,20 +284,25 @@ class StationDB:
                     station_id=station_id,
                     track_history_id=track_history_id,
                     embedding=embedding,
-                    rating=rating
+                    rating=rating,
                 )
                 session.add(embedding_history)
-            
+
             session.commit()
 
     def get_embedding_history(self, station_id: int) -> List[EmbeddingHistory]:
         """Get embedding history for a station."""
         with self.Session() as session:
-            return session.query(EmbeddingHistory).filter(
-                EmbeddingHistory.station_id == station_id
-            ).order_by(EmbeddingHistory.created_at).all()
+            return (
+                session.query(EmbeddingHistory)
+                .filter(EmbeddingHistory.station_id == station_id)
+                .order_by(EmbeddingHistory.created_at)
+                .all()
+            )
 
-    def load_station_history(self, station_id: int) -> Tuple[List[Any], List[TrackHistory], List[Dict[str, Any]]]:
+    def load_station_history(
+        self, station_id: int
+    ) -> Tuple[List[Any], List[TrackHistory], List[Dict[str, Any]]]:
         """Load embedding history, track history, and thumbs downed history for a station."""
         embeddings = self.get_embedding_history(station_id)
         tracks = self.get_track_history(station_id)
@@ -282,20 +312,33 @@ class StationDB:
         for embedding in embeddings:
             # Check that embedding has the right dimension (148)
             if len(embedding.embedding) == 148:
-                history = simulator.add_history(history, embedding.embedding, embedding.rating)
+                history = simulator.add_history(
+                    history, embedding.embedding, embedding.rating
+                )
 
         # Build thumbs downed from track history
         thumbs_downed = []
         with self.Session() as session:
-            thumbs_downed_tracks = session.query(TrackHistory).filter(
-                and_(
-                    TrackHistory.station_id == station_id,
-                    TrackHistory.is_thumbs_downed == True
+            thumbs_downed_tracks = (
+                session.query(TrackHistory)
+                .filter(
+                    and_(
+                        TrackHistory.station_id == station_id,
+                        TrackHistory.is_thumbs_downed == True,
+                    )
                 )
-            ).order_by(TrackHistory.created_at).all()
-            
+                .order_by(TrackHistory.created_at)
+                .all()
+            )
+
             thumbs_downed = [
-                {"metadata": {"artist": track.artist, "title": track.title, "album": track.album}}
+                {
+                    "metadata": {
+                        "artist": track.artist,
+                        "title": track.title,
+                        "album": track.album,
+                    }
+                }
                 for track in thumbs_downed_tracks
             ]
 

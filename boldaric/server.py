@@ -222,7 +222,11 @@ async def make_station(request):
 
         try:
             params = CreateStationParams(
-                **{k: v for k, v in data.items() if k in CreateStationParams.model_fields}
+                **{
+                    k: v
+                    for k, v in data.items()
+                    if k in CreateStationParams.model_fields
+                }
             )
         except ValidationError as e:
             return web.json_response({"error": e.errors()}, status=400)
@@ -294,7 +298,9 @@ async def get_next_song_for_station(request):
         embeddings = station_db.get_embedding_history(station_id)
 
         for embedding in embeddings:
-            history = boldaric.simulator.add_history(history, embedding.embedding, embedding.rating)
+            history = boldaric.simulator.add_history(
+                history, embedding.embedding, embedding.rating
+            )
 
         station_options: StationOptions = station_db.get_station_options(station_id)
 
@@ -318,7 +324,7 @@ async def get_next_song_for_station(request):
         def get_random(tracks):
             if len(tracks) == 0:
                 return None
-            
+
             choice = random.choices(
                 tracks, weights=[item["similarity"] for item in tracks], k=1
             )[0]
@@ -355,7 +361,9 @@ async def get_next_song_for_station(request):
             return web.json_response({"error": "Unable to find next song"}, status=400)
     except Exception as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"Error in get_next_song_for_station: {str(e)}\n{traceback.format_exc()}")
+        logger.error(
+            f"Error in get_next_song_for_station: {str(e)}\n{traceback.format_exc()}"
+        )
         return web.json_response({"error": "Error processing request"}, status=500)
 
 
@@ -366,7 +374,7 @@ async def get_station_info(request):
         station_id = request.match_info["station_id"]
 
         station = request.app["station_db"].get_station(user["id"], station_id)
-        
+
         if station:
             station_dict = {
                 "id": station.id,
@@ -396,7 +404,11 @@ async def update_station_info(request):
 
         try:
             params = UpdateStationParams(
-                **{k: v for k, v in data.items() if k in UpdateStationParams.model_fields}
+                **{
+                    k: v
+                    for k, v in data.items()
+                    if k in UpdateStationParams.model_fields
+                }
             )
         except ValidationError as e:
             return web.json_response({"error": e.errors()}, status=400)
@@ -425,7 +437,9 @@ async def update_station_info(request):
             return web.json_response({"error": "Station not found"}, status=404)
     except Exception as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"Error in update_station_info: {str(e)}\n{traceback.format_exc()}")
+        logger.error(
+            f"Error in update_station_info: {str(e)}\n{traceback.format_exc()}"
+        )
         return web.json_response({"error": "Error processing request"}, status=500)
 
 
@@ -489,7 +503,9 @@ async def add_song_to_history(request):
         return web.json_response({"success": True})
     except Exception as e:
         logger = logging.getLogger(__name__)
-        logger.error(f"Error in add_song_to_history: {str(e)}\n{traceback.format_exc()}")
+        logger.error(
+            f"Error in add_song_to_history: {str(e)}\n{traceback.format_exc()}"
+        )
         return web.json_response({"error": "Error processing request"}, status=500)
 
 
@@ -588,7 +604,9 @@ def initialize_database(db_path):
         # Override script_location to be absolute
         alembic_dir = os.path.join(os.path.dirname(alembic_ini_path), "alembic")
         alembic_cfg.set_main_option("script_location", alembic_dir)
-        alembic_cfg.set_main_option("path_separator", os.pathsep)  # Fix for Alembic warning
+        alembic_cfg.set_main_option(
+            "path_separator", os.pathsep
+        )  # Fix for Alembic warning
         alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
         command.stamp(alembic_cfg, "initial")
         print(f"Existing database at {db_path} stamped for migrations")
@@ -601,7 +619,9 @@ def initialize_database(db_path):
         # Run migrations
         alembic_ini_path = resources.files("boldaric").joinpath("alembic.ini")
         alembic_cfg = Config(str(alembic_ini_path))
-        alembic_cfg.set_main_option("path_separator", os.pathsep)  # Fix for Alembic warning
+        alembic_cfg.set_main_option(
+            "path_separator", os.pathsep
+        )  # Fix for Alembic warning
         alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
         command.upgrade(alembic_cfg, "head")
         print(f"New database created at {db_path} with migrations applied")
