@@ -80,10 +80,9 @@ class StationDB:
         with self.Session() as session:
             return session.query(User).filter(User.username == username).first()
 
-    def get_all_users(self) -> List[Tuple[int, str]]:
+    def get_all_users(self) -> List[User]:
         with self.Session() as session:
-            users = session.query(User).all()
-            return [(user.id, user.username) for user in users]
+            return session.query(User).all()
 
     # ----------------------
     # Station Management
@@ -208,32 +207,22 @@ class StationDB:
 
     def get_track_history(
         self, station_id: int, limit: int = 20
-    ) -> List[Tuple[str, str, bool]]:
+    ) -> List[TrackHistory]:
         """Get recent tracks played by a station."""
         with self.Session() as session:
-            tracks = session.query(TrackHistory).filter(
+            return session.query(TrackHistory).filter(
                 TrackHistory.station_id == station_id
             ).order_by(TrackHistory.updated_at.desc()).limit(limit).all()
-            
-            return [
-                (track.artist, track.title, track.is_thumbs_downed)
-                for track in tracks
-            ]
 
-    def get_thumbs_downed_history(self, station_id: int) -> List[Tuple[str, str, bool]]:
+    def get_thumbs_downed_history(self, station_id: int) -> List[TrackHistory]:
         """Get all thumbs downed tracks by a station."""
         with self.Session() as session:
-            tracks = session.query(TrackHistory).filter(
+            return session.query(TrackHistory).filter(
                 and_(
                     TrackHistory.station_id == station_id,
                     TrackHistory.is_thumbs_downed == True
                 )
             ).order_by(TrackHistory.updated_at).all()
-            
-            return [
-                (track.artist, track.title, track.is_thumbs_downed)
-                for track in tracks
-            ]
 
     def add_embedding_history(
         self, station_id: int, track_history_id: int, embedding: List[float], rating: int
@@ -276,27 +265,22 @@ class StationDB:
             
             session.commit()
 
-    def get_embedding_history(self, station_id: int) -> List[Tuple[List[float], int]]:
+    def get_embedding_history(self, station_id: int) -> List[EmbeddingHistory]:
         """Get embedding history for a station."""
         with self.Session() as session:
-            embeddings = session.query(EmbeddingHistory).filter(
+            return session.query(EmbeddingHistory).filter(
                 EmbeddingHistory.station_id == station_id
             ).order_by(EmbeddingHistory.created_at).all()
-            
-            return [
-                (embedding.embedding, embedding.rating)
-                for embedding in embeddings
-            ]
 
-    def load_station_history(self, station_id: int) -> Tuple[List[Any], List[Tuple[str, str, bool]], List[Dict[str, Any]]]:
+    def load_station_history(self, station_id: int) -> Tuple[List[Any], List[TrackHistory], List[Dict[str, Any]]]:
         """Load embedding history, track history, and thumbs downed history for a station."""
         embeddings = self.get_embedding_history(station_id)
         tracks = self.get_track_history(station_id)
 
         # Build history from embeddings
         history = simulator.make_history()
-        for embedding, rating in embeddings:
-            history = simulator.add_history(history, embedding, rating)
+        for embedding in embeddings:
+            history = simulator.add_history(history, embedding.embedding, embedding.rating)
 
         # Build thumbs downed from track history
         thumbs_downed = []

@@ -67,14 +67,13 @@ def get_next_songs(
     pool,
     station_options: StationOptions,
     history: list,
-    played: list[tuple[str, str, bool]],
-    thumbs_downed: list[tuple[str, str, bool]],
+    played: list[boldaric.models.track_history.TrackHistory],
+    thumbs_downed: list[boldaric.models.track_history.TrackHistory],
 ) -> list[dict]:
     logger = logging.getLogger(__name__)
     logger.debug("get_next_song")
 
-    # Both played and thumbs_downed are a list of 3-item tuples, where
-    # each tuple is: (artist, title, album)
+    # Both played and thumbs_downed are lists of TrackHistory models
     chunksize = (len(history) + pool._processes - 1) // pool._processes
 
     averages = boldaric.simulator.attract(pool, history, chunksize)
@@ -83,16 +82,16 @@ def get_next_songs(
     # query similar
     ignore_list = []
     # ignore ALL thumbs downed
-    ignore_list.extend([(x[0], x[1]) for x in thumbs_downed])
+    ignore_list.extend([(x.artist, x.title) for x in thumbs_downed])
     # ignore last X played
     replay_song_cooldown = station_options.replay_song_cooldown
-    ignore_list.extend([(x[0], x[1]) for x in played[-replay_song_cooldown:]])
+    ignore_list.extend([(x.artist, x.title) for x in played[-replay_song_cooldown:]])
     logger.debug(f"ignoring {ignore_list}")
 
     tracks = db.query_similar(new_features, n_results=45, ignore_songs=ignore_list)
 
     # resort these, and slightly downvote recent artists
-    recent_artists = [x[0] for x in played[-15:]]
+    recent_artists = [x.artist for x in played[-15:]]
 
     def update_similarity(t):
         replay_artist_downrank = station_options.replay_artist_downrank
@@ -137,8 +136,8 @@ async def auth_middleware(request, handler):
     user_salts = dict(
         [
             (
-                hashlib.sha256(salt + x[1].encode("utf-8")).hexdigest(),
-                {"id": x[0], "username": x[1]},
+                hashlib.sha256(salt + x.username.encode("utf-8")).hexdigest(),
+                {"id": x.id, "username": x.username},
             )
             for x in request.app["station_db"].get_all_users()
         ]
@@ -171,10 +170,10 @@ async def auth(request):
     if user:
         # make a token
         salt = request.app["salt"]
-        token = hashlib.sha256(salt + user["username"].encode("utf-8")).hexdigest()
+        token = hashlib.sha256(salt + user.username.encode("utf-8")).hexdigest()
 
         return web.json_response(
-            {"token": token, "id": user["id"], "username": user["username"]}
+            {"token": token, "id": user.id, "username": user.username}
         )
     else:
         return web.json_response({"error": "Unauthorized"}, status=401)
@@ -185,7 +184,20 @@ async def get_stations(request):
     user = request["user"]
     stations = request.app["station_db"].get_stations_for_user(user["id"])
 
-    return web.json_response(stations)
+    # Convert Station models to dictionaries for JSON serialization
+    stations_dict = [
+        {
+            "id": station.id,
+            "user_id": station.user_id,
+            "name": station.name,
+            "replay_song_cooldown": station.replay_song_cooldown,
+            "replay_artist_downrank": station.replay_artist_downrank,
+            "ignore_live": station.ignore_live,
+        }
+        for station in stations
+    ]
+
+    return web.json_response(stations_dict)
 
 
 @routes.post("/api/stations")
@@ -265,8 +277,8 @@ async def get_next_song_for_station(request):
     history = boldaric.simulator.make_history()
     embeddings = station_db.get_embedding_history(station_id)
 
-    for embedding, rating in embeddings:
-        history = boldaric.simulator.add_history(history, embedding, rating)
+    for embedding in embeddings:
+        history = boldaric.simulator.add_history(history, embedding.embedding, embedding.rating)
 
     station_options: StationOptions = station_db.get_station_options(station_id)
 
@@ -333,8 +345,19 @@ async def get_station_info(request):
     station_id = request.match_info["station_id"]
 
     station = request.app["station_db"].get_station(user["id"], station_id)
-
-    return web.json_response(station)
+    
+    if station:
+        station_dict = {
+            "id": station.id,
+            "user_id": station.user_id,
+            "name": station.name,
+            "replay_song_cooldown": station.replay_song_cooldown,
+            "replay_artist_downrank": station.replay_artist_downrank,
+            "ignore_live": station.ignore_live,
+        }
+        return web.json_response(station_dict)
+    else:
+        return web.json_response({"error": "Station not found"}, status=404)
 
 
 @routes.put("/api/station/{station_id}/info")
@@ -361,7 +384,18 @@ async def update_station_info(request):
     )
 
     station = station_db.get_station(user["id"], station_id)
-    return web.json_response(station)
+    if station:
+        station_dict = {
+            "id": station.id,
+            "user_id": station.user_id,
+            "name": station.name,
+            "replay_song_cooldown": station.replay_song_cooldown,
+            "replay_artist_downrank": station.replay_artist_downrank,
+            "ignore_live": station.ignore_live,
+        }
+        return web.json_response(station_dict)
+    else:
+        return web.json_response({"error": "Station not found"}, status=404)
 
 
 @routes.post("/api/station/{station_id}/seed")
