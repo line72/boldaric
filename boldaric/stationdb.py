@@ -8,9 +8,10 @@
 # This provides a RESTful API for creating stations, getting next
 # tracks for a stations, rating songs, seeding songs, and so on.
 
-import sqlite3
 import pickle
 from typing import Optional
+from datetime import datetime, timedelta
+import os
 
 from importlib import resources
 
@@ -19,7 +20,15 @@ from .records.station_options import StationOptions
 
 from alembic import command
 from alembic.config import Config
-import os
+
+from sqlalchemy import create_engine, and_, or_, func
+from sqlalchemy.orm import sessionmaker
+
+from .models import Base
+from .models.user import User
+from .models.station import Station
+from .models.track_history import TrackHistory
+from .models.embedding_history import EmbeddingHistory
 
 
 class StationDB:
@@ -30,6 +39,10 @@ class StationDB:
     def __init__(self, db_path: str = "stations.db"):
         self.db_path = db_path
         self._run_migrations()
+        
+        # Set up SQLAlchemy engine and session
+        self.engine = create_engine(f"sqlite:///{db_path}")
+        self.Session = sessionmaker(bind=self.engine)
 
     def _run_migrations(self):
         """Run any pending database migrations."""
@@ -50,34 +63,30 @@ class StationDB:
             alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{self.db_path}")
             command.upgrade(alembic_cfg, "head")
 
-    def _connect(self) -> sqlite3.Connection:
-        """Create a new database connection."""
-        return sqlite3.connect(self.db_path)
-
     # ----------------------
     # User Management
     # ----------------------
 
     def create_user(self, username: str) -> int:
         """Create a new user and return their ID."""
-        with self._connect() as conn:
-            cur = conn.execute("INSERT INTO users (username) VALUES (?)", (username,))
-            return cur.lastrowid
+        with self.Session() as session:
+            user = User(username=username)
+            session.add(user)
+            session.commit()
+            return user.id
 
     def get_user(self, username: str) -> dict | None:
         """Get a user by username."""
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT id, username FROM users WHERE username = ?", (username,)
-            ).fetchone()
-            return {"id": row[0], "username": row[1]} if row else None
+        with self.Session() as session:
+            user = session.query(User).filter(User.username == username).first()
+            if user:
+                return {"id": user.id, "username": user.username}
+        return None
 
     def get_all_users(self) -> list[tuple[int, str]]:
-        with self._connect() as conn:
-            return [
-                (row[0], row[1])
-                for row in conn.execute("SELECT id, username FROM users").fetchall()
-            ]
+        with self.Session() as session:
+            users = session.query(User).all()
+            return [(user.id, user.username) for user in users]
 
     # ----------------------
     # Station Management
@@ -85,71 +94,65 @@ class StationDB:
 
     def create_station(self, user_id: int, station_name: str) -> int:
         """Create a new station for a user."""
-        with self._connect() as conn:
-            cur = conn.execute(
-                "INSERT INTO stations (user_id, name) VALUES (?, ?)",
-                (user_id, station_name),
-            )
-            return cur.lastrowid
+        with self.Session() as session:
+            station = Station(user_id=user_id, name=station_name)
+            session.add(station)
+            session.commit()
+            return station.id
 
     def get_stations_for_user(self, user_id: int) -> list:
         """Get all stations for a user."""
-        with self._connect() as conn:
+        with self.Session() as session:
+            stations = session.query(Station).filter(Station.user_id == user_id).all()
             return [
                 {
-                    "id": row[0],
-                    "name": row[1],
-                    "replay_song_cooldown": row[2],
-                    "replay_artist_downrank": row[3],
-                    "ignore_live": row[4],
+                    "id": station.id,
+                    "name": station.name,
+                    "replay_song_cooldown": station.replay_song_cooldown,
+                    "replay_artist_downrank": station.replay_artist_downrank,
+                    "ignore_live": station.ignore_live,
                 }
-                for row in conn.execute(
-                    "SELECT id, name, replay_song_cooldown, replay_artist_downrank, ignore_live FROM stations WHERE user_id = ?",
-                    (user_id,),
-                ).fetchall()
+                for station in stations
             ]
 
     def get_station_id(self, user_id: int, station_name: str) -> int | None:
         """Get a station ID by user ID and station name."""
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT id FROM stations WHERE user_id = ? AND name = ?",
-                (user_id, station_name),
-            ).fetchone()
-            return row[0] if row else None
+        with self.Session() as session:
+            station = session.query(Station).filter(
+                Station.user_id == user_id,
+                Station.name == station_name
+            ).first()
+            return station.id if station else None
 
     def get_station(self, user_id: int, station_id: str) -> dict | None:
         """Get a station by ID"""
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT id, name, replay_song_cooldown, replay_artist_downrank, ignore_live FROM stations WHERE user_id = ? AND id = ?",
-                (user_id, station_id),
-            ).fetchone()
-            return (
-                {
-                    "id": row[0],
-                    "name": row[1],
-                    "replay_song_cooldown": row[2],
-                    "replay_artist_downrank": row[3],
-                    "ignore_live": row[4],
+        with self.Session() as session:
+            station = session.query(Station).filter(
+                Station.user_id == user_id,
+                Station.id == station_id
+            ).first()
+            if station:
+                return {
+                    "id": station.id,
+                    "name": station.name,
+                    "replay_song_cooldown": station.replay_song_cooldown,
+                    "replay_artist_downrank": station.replay_artist_downrank,
+                    "ignore_live": station.ignore_live,
                 }
-                if row
-                else None
-            )
+        return None
 
     def get_station_options(self, station_id: int) -> StationOptions:
         """Get the options for a station"""
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT replay_song_cooldown, replay_artist_downrank, ignore_live FROM stations WHERE id = ?",
-                (station_id,),
-            ).fetchone()
-
-            return StationOptions(
-                replay_song_cooldown=row[0],
-                replay_artist_downrank=row[1],
-                ignore_live=row[2],
-            )
+        with self.Session() as session:
+            station = session.query(Station).filter(Station.id == station_id).first()
+            if station:
+                return StationOptions(
+                    replay_song_cooldown=station.replay_song_cooldown,
+                    replay_artist_downrank=station.replay_artist_downrank,
+                    ignore_live=station.ignore_live,
+                )
+            # Fallback to default options if station not found
+            return StationOptions()
 
     def set_station_options(
         self,
@@ -158,29 +161,29 @@ class StationDB:
         replay_artist_downrank: float,
         ignore_live: bool,
     ) -> None:
-        with self._connect() as conn:
-            conn.execute(
-                "UPDATE stations SET replay_song_cooldown = ?, replay_artist_downrank = ?, ignore_live = ? WHERE id = ?",
-                (replay_song_cooldown, replay_artist_downrank, ignore_live, station_id),
-            )
+        with self.Session() as session:
+            station = session.query(Station).filter(Station.id == station_id).first()
+            if station:
+                station.replay_song_cooldown = replay_song_cooldown
+                station.replay_artist_downrank = replay_artist_downrank
+                station.ignore_live = ignore_live
+                session.commit()
 
     def get_station_embedding(self, station_id: int) -> list | None:
         """Get the current embedding for a station."""
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT current_embedding FROM stations WHERE id = ?", (station_id,)
-            ).fetchone()
-            if row and row[0]:
-                return pickle.loads(row[0])
+        with self.Session() as session:
+            station = session.query(Station).filter(Station.id == station_id).first()
+            if station and station.current_embedding:
+                return station.current_embedding
         return None
 
     def set_station_embedding(self, station_id: int, embedding: list):
         """Set the current embedding for a station."""
-        with self._connect() as conn:
-            conn.execute(
-                "UPDATE stations SET current_embedding = ? WHERE id = ?",
-                (pickle.dumps(embedding), station_id),
-            )
+        with self.Session() as session:
+            station = session.query(Station).filter(Station.id == station_id).first()
+            if station:
+                station.current_embedding = embedding
+                session.commit()
 
     # ----------------------
     # History Management
@@ -196,113 +199,115 @@ class StationDB:
         is_thumbs_downed: bool,
     ):
         """Add a track to the station's history. If it is recent, update the existing row"""
-        with self._connect() as conn:
-            row = conn.execute(
-                "SELECT id FROM track_history WHERE station_id = ? AND subsonic_id = ?",
-                (station_id, subsonic_id),
-            ).fetchone()
+        with self.Session() as session:
+            # Check if track already exists in history
+            track_history = session.query(TrackHistory).filter(
+                TrackHistory.station_id == station_id,
+                TrackHistory.subsonic_id == subsonic_id
+            ).first()
 
-            if row:
-                # just update it, if we have thumbsed it down
-                #  then set that. We only go from !thumbs_downed -> thumbs_downed,
-                #  not the other way (you can't unset this magically)
+            if track_history:
+                # Update existing record
+                track_history.updated_at = datetime.now()
+                # Only update thumbs_downed if it's being set to True
                 if is_thumbs_downed:
-                    conn.execute(
-                        "UPDATE track_history SET updated_at = CURRENT_TIMESTAMP, is_thumbs_downed = ? WHERE id = ?",
-                        (is_thumbs_downed, row[0]),
-                    )
-                    return row[0]
-                else:
-                    conn.execute(
-                        "UPDATE track_history SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
-                        (row[0],),
-                    )
-                    return row[0]
+                    track_history.is_thumbs_downed = is_thumbs_downed
+                session.commit()
+                return track_history.id
             else:
-                cursor = conn.execute(
-                    "INSERT INTO track_history (station_id, subsonic_id, artist, title, album, is_thumbs_downed) VALUES (?, ?, ?, ?, ?, ?)",
-                    (station_id, subsonic_id, artist, title, album, is_thumbs_downed),
+                # Create new record
+                track_history = TrackHistory(
+                    station_id=station_id,
+                    subsonic_id=subsonic_id,
+                    artist=artist,
+                    title=title,
+                    album=album,
+                    is_thumbs_downed=is_thumbs_downed
                 )
-                return cursor.lastrowid
+                session.add(track_history)
+                session.commit()
+                return track_history.id
 
     def get_track_history(
         self, station_id: int, limit: int = 20
     ) -> list[tuple[str, str, bool]]:
         """Get recent tracks played by a station."""
-        with self._connect() as conn:
+        with self.Session() as session:
+            tracks = session.query(TrackHistory).filter(
+                TrackHistory.station_id == station_id
+            ).order_by(TrackHistory.updated_at.desc()).limit(limit).all()
+            
             return [
-                (row[0], row[1], row[2])  # (artist, title, thumbs_downed)
-                for row in conn.execute(
-                    "SELECT artist, title, is_thumbs_downed FROM track_history WHERE station_id = ? ORDER BY updated_at DESC LIMIT ?",
-                    (station_id, limit),
-                ).fetchall()
+                (track.artist, track.title, track.is_thumbs_downed)
+                for track in tracks
             ]
 
     def get_thumbs_downed_history(self, station_id: int) -> list[tuple[str, str, bool]]:
         """Get all thumbs downed tracks by a station."""
-        with self._connect() as conn:
+        with self.Session() as session:
+            tracks = session.query(TrackHistory).filter(
+                and_(
+                    TrackHistory.station_id == station_id,
+                    TrackHistory.is_thumbs_downed == True
+                )
+            ).order_by(TrackHistory.updated_at).all()
+            
             return [
-                (row[0], row[1], row[2])  # (artist, title, thumbs_downed)
-                for row in conn.execute(
-                    "SELECT artist, title, is_thumbs_downed FROM track_history WHERE station_id = ? AND is_thumbs_downed=true ORDER BY updated_at",
-                    (station_id,),
-                ).fetchall()
+                (track.artist, track.title, track.is_thumbs_downed)
+                for track in tracks
             ]
 
     def add_embedding_history(
         self, station_id: int, track_history_id: int, embedding: list, rating: int
     ):
         """Add an embedding to the station's history."""
-        with self._connect() as conn:
+        with self.Session() as session:
             # Query for embeddings that match this track_history_id
-            #  AND were created in the previous 30 minutes OR is the
-            #  most recent embedding for this station
-            row = conn.execute(
-                """
-                SELECT id, created_at 
-                FROM embedding_history 
-                WHERE station_id = ? 
-                  AND track_history_id = ? 
-                  AND (
-                    created_at >= datetime('now', '-30 minutes')
-                    OR id = (
-                      SELECT id 
-                      FROM embedding_history 
-                      WHERE station_id = embedding_history.station_id 
-                      ORDER BY created_at DESC 
-                      LIMIT 1
+            # AND were created in the previous 30 minutes OR is the
+            # most recent embedding for this station
+            thirty_minutes_ago = datetime.now() - timedelta(minutes=30)
+            
+            recent_embedding = session.query(EmbeddingHistory).filter(
+                and_(
+                    EmbeddingHistory.station_id == station_id,
+                    EmbeddingHistory.track_history_id == track_history_id,
+                    or_(
+                        EmbeddingHistory.created_at >= thirty_minutes_ago,
+                        EmbeddingHistory.id == session.query(
+                            func.max(EmbeddingHistory.id)
+                        ).filter(EmbeddingHistory.station_id == station_id)
                     )
-                  )
-                ORDER BY created_at DESC 
-                LIMIT 1
-            """,
-                (station_id, track_history_id),
-            ).fetchone()
+                )
+            ).order_by(EmbeddingHistory.created_at.desc()).first()
 
             # we have a recent embedding, if this was created in the last 30 minutes,
-            #  then just update it instead of creating a second one. Likely, the client
-            #  did something dumb, and played a song twice in a row or something...
-            if row:
+            # then just update it instead of creating a second one. Likely, the client
+            # did something dumb, and played a song twice in a row or something...
+            if recent_embedding:
                 # Update it
-                conn.execute(
-                    "UPDATE embedding_history SET rating = ? WHERE id = ?",
-                    (rating, row[0]),
-                )
+                recent_embedding.rating = rating
             else:
-                conn.execute(
-                    "INSERT INTO embedding_history (station_id, track_history_id, embedding, rating) VALUES (?, ?, ?, ?)",
-                    (station_id, track_history_id, pickle.dumps(embedding), rating),
+                # Create new embedding
+                embedding_history = EmbeddingHistory(
+                    station_id=station_id,
+                    track_history_id=track_history_id,
+                    embedding=embedding,
+                    rating=rating
                 )
+                session.add(embedding_history)
+            
+            session.commit()
 
     def get_embedding_history(self, station_id: int) -> list[tuple[list, int]]:
         """Get embedding history for a station."""
-        with self._connect() as conn:
+        with self.Session() as session:
+            embeddings = session.query(EmbeddingHistory).filter(
+                EmbeddingHistory.station_id == station_id
+            ).order_by(EmbeddingHistory.created_at).all()
+            
             return [
-                (pickle.loads(row[0]), row[1])  # (embedding, rating)
-                for row in conn.execute(
-                    "SELECT embedding, rating FROM embedding_history WHERE station_id = ? ORDER BY created_at",
-                    (station_id,),
-                ).fetchall()
+                (embedding.embedding, embedding.rating)
+                for embedding in embeddings
             ]
 
     def load_station_history(self, station_id: int) -> tuple[list, list, list]:
@@ -317,13 +322,17 @@ class StationDB:
 
         # Build thumbs downed from track history
         thumbs_downed = []
-        with self._connect() as conn:
+        with self.Session() as session:
+            thumbs_downed_tracks = session.query(TrackHistory).filter(
+                and_(
+                    TrackHistory.station_id == station_id,
+                    TrackHistory.is_thumbs_downed == True
+                )
+            ).order_by(TrackHistory.created_at).all()
+            
             thumbs_downed = [
-                {"metadata": {"artist": row[0], "title": row[1], "album": row[2]}}
-                for row in conn.execute(
-                    "SELECT artist, title, album FROM track_history WHERE station_id = ? AND is_thumbs_downed = 1 ORDER BY created_at",
-                    (station_id,),
-                ).fetchall()
+                {"metadata": {"artist": track.artist, "title": track.title, "album": track.album}}
+                for track in thumbs_downed_tracks
             ]
 
         return history, tracks, thumbs_downed
