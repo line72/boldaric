@@ -9,7 +9,7 @@
 # tracks for a stations, rating songs, seeding songs, and so on.
 
 import pickle
-from typing import Optional
+from typing import Optional, List, Tuple, Dict, Any
 from datetime import datetime, timedelta
 import os
 
@@ -22,7 +22,7 @@ from alembic import command
 from alembic.config import Config
 
 from sqlalchemy import create_engine, and_, or_, func
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 
 from .models import Base
 from .models.user import User
@@ -75,15 +75,12 @@ class StationDB:
             session.commit()
             return user.id
 
-    def get_user(self, username: str) -> dict | None:
+    def get_user(self, username: str) -> Optional[User]:
         """Get a user by username."""
         with self.Session() as session:
-            user = session.query(User).filter(User.username == username).first()
-            if user:
-                return {"id": user.id, "username": user.username}
-        return None
+            return session.query(User).filter(User.username == username).first()
 
-    def get_all_users(self) -> list[tuple[int, str]]:
+    def get_all_users(self) -> List[Tuple[int, str]]:
         with self.Session() as session:
             users = session.query(User).all()
             return [(user.id, user.username) for user in users]
@@ -100,22 +97,12 @@ class StationDB:
             session.commit()
             return station.id
 
-    def get_stations_for_user(self, user_id: int) -> list:
+    def get_stations_for_user(self, user_id: int) -> List[Station]:
         """Get all stations for a user."""
         with self.Session() as session:
-            stations = session.query(Station).filter(Station.user_id == user_id).all()
-            return [
-                {
-                    "id": station.id,
-                    "name": station.name,
-                    "replay_song_cooldown": station.replay_song_cooldown,
-                    "replay_artist_downrank": station.replay_artist_downrank,
-                    "ignore_live": station.ignore_live,
-                }
-                for station in stations
-            ]
+            return session.query(Station).filter(Station.user_id == user_id).all()
 
-    def get_station_id(self, user_id: int, station_name: str) -> int | None:
+    def get_station_id(self, user_id: int, station_name: str) -> Optional[int]:
         """Get a station ID by user ID and station name."""
         with self.Session() as session:
             station = session.query(Station).filter(
@@ -124,22 +111,13 @@ class StationDB:
             ).first()
             return station.id if station else None
 
-    def get_station(self, user_id: int, station_id: str) -> dict | None:
+    def get_station(self, user_id: int, station_id: str) -> Optional[Station]:
         """Get a station by ID"""
         with self.Session() as session:
-            station = session.query(Station).filter(
+            return session.query(Station).filter(
                 Station.user_id == user_id,
                 Station.id == station_id
             ).first()
-            if station:
-                return {
-                    "id": station.id,
-                    "name": station.name,
-                    "replay_song_cooldown": station.replay_song_cooldown,
-                    "replay_artist_downrank": station.replay_artist_downrank,
-                    "ignore_live": station.ignore_live,
-                }
-        return None
 
     def get_station_options(self, station_id: int) -> StationOptions:
         """Get the options for a station"""
@@ -169,7 +147,7 @@ class StationDB:
                 station.ignore_live = ignore_live
                 session.commit()
 
-    def get_station_embedding(self, station_id: int) -> list | None:
+    def get_station_embedding(self, station_id: int) -> Optional[List[float]]:
         """Get the current embedding for a station."""
         with self.Session() as session:
             station = session.query(Station).filter(Station.id == station_id).first()
@@ -177,7 +155,7 @@ class StationDB:
                 return station.current_embedding
         return None
 
-    def set_station_embedding(self, station_id: int, embedding: list):
+    def set_station_embedding(self, station_id: int, embedding: List[float]) -> None:
         """Set the current embedding for a station."""
         with self.Session() as session:
             station = session.query(Station).filter(Station.id == station_id).first()
@@ -197,7 +175,7 @@ class StationDB:
         title: str,
         album: str,
         is_thumbs_downed: bool,
-    ):
+    ) -> int:
         """Add a track to the station's history. If it is recent, update the existing row"""
         with self.Session() as session:
             # Check if track already exists in history
@@ -230,7 +208,7 @@ class StationDB:
 
     def get_track_history(
         self, station_id: int, limit: int = 20
-    ) -> list[tuple[str, str, bool]]:
+    ) -> List[Tuple[str, str, bool]]:
         """Get recent tracks played by a station."""
         with self.Session() as session:
             tracks = session.query(TrackHistory).filter(
@@ -242,7 +220,7 @@ class StationDB:
                 for track in tracks
             ]
 
-    def get_thumbs_downed_history(self, station_id: int) -> list[tuple[str, str, bool]]:
+    def get_thumbs_downed_history(self, station_id: int) -> List[Tuple[str, str, bool]]:
         """Get all thumbs downed tracks by a station."""
         with self.Session() as session:
             tracks = session.query(TrackHistory).filter(
@@ -258,8 +236,8 @@ class StationDB:
             ]
 
     def add_embedding_history(
-        self, station_id: int, track_history_id: int, embedding: list, rating: int
-    ):
+        self, station_id: int, track_history_id: int, embedding: List[float], rating: int
+    ) -> None:
         """Add an embedding to the station's history."""
         with self.Session() as session:
             # Query for embeddings that match this track_history_id
@@ -298,7 +276,7 @@ class StationDB:
             
             session.commit()
 
-    def get_embedding_history(self, station_id: int) -> list[tuple[list, int]]:
+    def get_embedding_history(self, station_id: int) -> List[Tuple[List[float], int]]:
         """Get embedding history for a station."""
         with self.Session() as session:
             embeddings = session.query(EmbeddingHistory).filter(
@@ -310,7 +288,7 @@ class StationDB:
                 for embedding in embeddings
             ]
 
-    def load_station_history(self, station_id: int) -> tuple[list, list, list]:
+    def load_station_history(self, station_id: int) -> Tuple[List[Any], List[Tuple[str, str, bool]], List[Dict[str, Any]]]:
         """Load embedding history, track history, and thumbs downed history for a station."""
         embeddings = self.get_embedding_history(station_id)
         tracks = self.get_track_history(station_id)
