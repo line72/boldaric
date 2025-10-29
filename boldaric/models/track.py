@@ -3,7 +3,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
 import numpy as np
-from ..models import Base
+
+from . import Base
 
 class TrackModel(Base):
     __tablename__ = 'tracks'
