@@ -1,9 +1,8 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql import func
 
-from . import Base
-
+Base = declarative_base()
 
 class TrackHistory(Base):
     __tablename__ = "track_history"
@@ -15,8 +14,8 @@ class TrackHistory(Base):
     title = Column(String, nullable=False)
     album = Column(String, nullable=False)
     is_thumbs_downed = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     # Relationships
     station = relationship("Station", back_populates="track_history")
