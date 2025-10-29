@@ -17,7 +17,6 @@ from importlib import resources
 
 from . import simulator
 from .records.station_options import StationOptions
-from .records.track import Track
 
 from alembic import command
 from alembic.config import Config
@@ -463,76 +462,9 @@ class StationDB:
             session.commit()
             return track_record.id
 
-    def get_track_by_subsonic_id(self, subsonic_id: str) -> Track | None:
+    def get_track_by_subsonic_id(self, subsonic_id: str) -> TrackModel | None:
         """Get a track based on subsonic id"""
         with self.Session() as session:
-            track_model = session.query(TrackModel).filter(
+            return session.query(TrackModel).filter(
                 TrackModel.subsonic_id == subsonic_id
             ).first()
-            
-            if track_model:
-                # Deserialize binary data back to numpy arrays
-                def deserialize_array(binary_data, shape=None):
-                    """Deserialize binary data back to numpy array"""
-                    if binary_data is None:
-                        return None
-                    arr = np.frombuffer(binary_data, dtype=np.float64)
-                    if shape:
-                        arr = arr.reshape(shape)
-                    return arr
-
-                # Deserialize the binary fields
-                genre_embedding_array = deserialize_array(track_model.genre_embedding)
-                mfcc_mean_array = deserialize_array(track_model.mfcc_mean)
-                mfcc_covariance_array = deserialize_array(track_model.mfcc_covariance, (13, 13))
-
-                track = Track(
-                    tid=track_model.id,
-                    artist=track_model.artist,
-                    album=track_model.album,
-                    track=track_model.track,
-                    track_number=track_model.track_number,
-                    genre=track_model.genre,
-                    subsonic_id=track_model.subsonic_id,
-                    musicbrainz_artistid=track_model.musicbrainz_artistid,
-                    musicbrainz_albumid=track_model.musicbrainz_albumid,
-                    musicbrainz_trackid=track_model.musicbrainz_trackid,
-                    releasetype=track_model.releasetype,
-                    genre_embedding=genre_embedding_array,
-                    mfcc_covariance=mfcc_covariance_array,
-                    mfcc_mean=mfcc_mean_array,
-                    mfcc_temporal_variation=track_model.mfcc_temporal_variation,
-                    bpm=track_model.bpm,
-                    loudness=track_model.loudness,
-                    dynamic_complexity=track_model.dynamic_complexity,
-                    energy_curve_mean=track_model.energy_curve_mean,
-                    energy_curve_std=track_model.energy_curve_std,
-                    energy_curve_peak_count=track_model.energy_curve_peak_count,
-                    key_tonic=track_model.key_tonic,
-                    key_scale=track_model.key_scale,
-                    key_confidence=track_model.key_confidence,
-                    chord_unique_chords=track_model.chord_unique_chords,
-                    chord_change_rate=track_model.chord_change_rate,
-                    vocal_pitch_presence_ratio=track_model.vocal_pitch_presence_ratio,
-                    vocal_pitch_segment_count=track_model.vocal_pitch_segment_count,
-                    vocal_avg_pitch_duration=track_model.vocal_avg_pitch_duration,
-                    groove_beat_consistency=track_model.groove_beat_consistency,
-                    groove_danceability=track_model.groove_danceability,
-                    groove_dnc_bpm=track_model.groove_dnc_bpm,
-                    groove_syncopation=track_model.groove_syncopation,
-                    groove_tempo_stability=track_model.groove_tempo_stability,
-                    mood_aggressiveness=track_model.mood_aggressiveness,
-                    mood_happiness=track_model.mood_happiness,
-                    mood_partiness=track_model.mood_partiness,
-                    mood_relaxedness=track_model.mood_relaxedness,
-                    mood_sadness=track_model.mood_sadness,
-                    spectral_character_brightness=track_model.spectral_character_brightness,
-                    spectral_character_contrast_mean=track_model.spectral_character_contrast_mean,
-                    spectral_character_valley_std=track_model.spectral_character_valley_std,
-                    created_at=track_model.created_at,
-                    updated_at=track_model.updated_at,
-                )
-                
-                return track
-            else:
-                return None

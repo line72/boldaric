@@ -1,6 +1,8 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, LargeBinary
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
+import numpy as np
 from ..models import Base
 
 class TrackModel(Base):
@@ -50,3 +52,25 @@ class TrackModel(Base):
     spectral_character_valley_std = Column(Float)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    @hybrid_property
+    def genre_embedding_array(self):
+        """Get the genre embedding as a numpy array"""
+        if self.genre_embedding is None:
+            return None
+        return np.frombuffer(self.genre_embedding, dtype=np.float64)
+    
+    @hybrid_property
+    def mfcc_mean_array(self):
+        """Get the mfcc mean as a numpy array"""
+        if self.mfcc_mean is None:
+            return None
+        return np.frombuffer(self.mfcc_mean, dtype=np.float64)
+    
+    @hybrid_property
+    def mfcc_covariance_array(self):
+        """Get the mfcc covariance as a numpy array"""
+        if self.mfcc_covariance is None:
+            return None
+        # Assuming a 13x13 covariance matrix for MFCC features
+        return np.frombuffer(self.mfcc_covariance, dtype=np.float64).reshape((13, 13))
