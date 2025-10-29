@@ -29,7 +29,7 @@ from .models.user import User
 from .models.station import Station
 from .models.track_history import TrackHistory
 from .models.embedding_history import EmbeddingHistory
-from .models.track import TrackModel
+from .models.track import Track
 
 
 class StationDB:
@@ -391,7 +391,7 @@ class StationDB:
         spectral_character_brightness: float,
         spectral_character_contrast_mean: float,
         spectral_character_valley_std: float,
-    ) -> TrackModel:
+    ) -> Track:
         # Convert lists to numpy arrays and serialize as binary data
         def serialize_array(arr):
             if arr is None:
@@ -406,15 +406,15 @@ class StationDB:
         
         with self.Session() as session:
             # Check if track already exists
-            existing_track = session.query(TrackModel).filter(
-                TrackModel.subsonic_id == subsonic_id
+            existing_track = session.query(Track).filter(
+                Track.subsonic_id == subsonic_id
             ).first()
             
             if existing_track:
                 return existing_track
             
             # Create a new track record
-            track_record = TrackModel(
+            track_record = Track(
                 artist=artist,
                 album=album,
                 track=track,
@@ -462,9 +462,9 @@ class StationDB:
             session.commit()
             return track_record
 
-    def get_track_by_subsonic_id(self, subsonic_id: str) -> TrackModel | None:
+    def get_track_by_subsonic_id(self, subsonic_id: str) -> Track | None:
         """Get a track based on subsonic id"""
         with self.Session() as session:
-            return session.query(TrackModel).filter(
-                TrackModel.subsonic_id == subsonic_id
+            return session.query(Track).filter(
+                Track.subsonic_id == subsonic_id
             ).first()
