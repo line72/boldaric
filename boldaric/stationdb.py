@@ -29,6 +29,8 @@ from .models.station import Station
 from .models.track_history import TrackHistory
 from .models.embedding_history import EmbeddingHistory
 from .models.track import Track
+from .models.genre import Genre
+from .models.track_genre import TrackGenre
 
 
 class StationDB:

@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, LargeBinary
+from sqlalchemy import Column, Integer, String, Float, DateTime, LargeBinary, ForeignKey
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import numpy as np
 from typing import Optional
@@ -54,6 +55,9 @@ class Track(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
+    # Relationships
+    track_genres = relationship("TrackGenre", back_populates="track")
+    
     @hybrid_property
     def genre_embedding_array(self) -> Optional[np.ndarray]:
         """Get the genre embedding as a numpy array"""
@@ -75,3 +79,8 @@ class Track(Base):
             return None
         # Assuming a 13x13 covariance matrix for MFCC features
         return np.frombuffer(bytes(self.mfcc_covariance), dtype=np.float64).reshape((13, 13))
+    
+    @hybrid_property
+    def genres(self):
+        """Get list of genre names for this track"""
+        return [tg.genre.name for tg in self.track_genres if tg.genre]
