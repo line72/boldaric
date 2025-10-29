@@ -391,7 +391,7 @@ class StationDB:
         spectral_character_brightness: float,
         spectral_character_contrast_mean: float,
         spectral_character_valley_std: float,
-    ) -> int:
+    ) -> TrackModel:
         # Convert lists to numpy arrays and serialize as binary data
         def serialize_array(arr):
             if arr is None:
@@ -411,7 +411,7 @@ class StationDB:
             ).first()
             
             if existing_track:
-                return existing_track.id
+                return existing_track
             
             # Create a new track record
             track_record = TrackModel(
@@ -460,7 +460,7 @@ class StationDB:
             
             session.add(track_record)
             session.commit()
-            return track_record.id
+            return track_record
 
     def get_track_by_subsonic_id(self, subsonic_id: str) -> TrackModel | None:
         """Get a track based on subsonic id"""
