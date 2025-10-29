@@ -1,11 +1,10 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, LargeBinary
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.sql import func
 import numpy as np
 from typing import Optional
 
-Base = declarative_base()
+from . import Base
 
 class Track(Base):
     __tablename__ = 'tracks'

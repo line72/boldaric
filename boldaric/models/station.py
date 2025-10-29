@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, PickleType
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import relationship
 
-Base = declarative_base()
+from . import Base
 
 class Station(Base):
     __tablename__ = "stations"
