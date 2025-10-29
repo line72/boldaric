@@ -5,7 +5,7 @@ from sqlalchemy.sql import func
 import numpy as np
 from typing import Optional
 
-from . import Base
+Base = declarative_base()
 
 class Track(Base):
     __tablename__ = 'tracks'

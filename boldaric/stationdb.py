@@ -24,7 +24,6 @@ from alembic.config import Config
 from sqlalchemy import create_engine, and_, or_, func
 from sqlalchemy.orm import sessionmaker, Session
 
-from .models import Base
 from .models.user import User
 from .models.station import Station
 from .models.track_history import TrackHistory
