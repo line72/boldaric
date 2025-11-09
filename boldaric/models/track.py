@@ -52,8 +52,8 @@ class Track(Base):
     spectral_character_brightness = Column(Float)
     spectral_character_contrast_mean = Column(Float)
     spectral_character_valley_std = Column(Float)
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relationships
     track_genres = relationship("TrackGenre", back_populates="track")
