@@ -352,6 +352,8 @@ def main():
     generator_process.start()
 
     db_name = os.path.join(args.db_path, "stations.db")
+    # Open up the DB, so all migratinos run first
+    stationdb = boldaric.StationDB(db_name)
 
     workers = []
     for _ in range(args.workers):

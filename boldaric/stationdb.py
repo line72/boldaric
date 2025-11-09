@@ -463,8 +463,29 @@ class StationDB:
             session.add(track_record)
             session.commit()
 
-            # TODO: link genres using
-            # genre_list which looks like [{"label": "Heavy Metal", "score", 0.932}, ...]
+            # Link genres using genre_list which looks like [{"label": "Heavy Metal", "score", 0.932}, ...]
+            if genre_list:
+                for genre_item in genre_list:
+                    genre_label = genre_item["label"]
+                    genre_score = genre_item["score"]
+                    
+                    # Check if genre already exists
+                    genre = session.query(Genre).filter(Genre.label == genre_label).first()
+                    if not genre:
+                        # Create new genre if it doesn't exist
+                        genre = Genre(label=genre_label)
+                        session.add(genre)
+                        session.flush()  # Get the genre ID without committing
+                    
+                    # Create track-genre relationship with score
+                    track_genre = TrackGenre(
+                        track_id=track_record.id,
+                        genre_id=genre.id,
+                        score=genre_score
+                    )
+                    session.add(track_genre)
+                
+                session.commit()
             
             
             return track_record
