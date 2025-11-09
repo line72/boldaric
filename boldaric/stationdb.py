@@ -361,6 +361,7 @@ class StationDB:
         musicbrainz_albumid: str,
         musicbrainz_trackid: str,
         releasetype: str,
+        genre_list,
         genre_embedding,
         mfcc_covariance,
         mfcc_mean,
@@ -461,6 +462,11 @@ class StationDB:
             
             session.add(track_record)
             session.commit()
+
+            # TODO: link genres using
+            # genre_list which looks like [{"label": "Heavy Metal", "score", 0.932}, ...]
+            
+            
             return track_record
 
     def get_track_by_subsonic_id(self, subsonic_id: str) -> Track | None:

@@ -163,6 +163,7 @@ def process_song(song, conn, stationdb, vectordb):
                 musicbrainz_albumid=get_in(features, ["metadata", "musicbrainz_releasegroupid"], ""),
                 musicbrainz_trackid=get_in(features, ["metadata", "musicbrainz_releasetrackid"], ""),
                 releasetype=get_in(features, ["metadata", "releasetype"], ""),
+                genre_list=get_in(features, ["genre"], []),
                 genre_embedding=get_in(features, ["genre_embeddings"], []),
                 mfcc_covariance=get_in(features, ["mfcc", "covariance"], []),
                 mfcc_mean=get_in(features, ["mfcc", "mean"], []),
