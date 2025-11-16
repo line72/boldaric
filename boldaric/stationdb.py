@@ -175,10 +175,7 @@ class StationDB:
     def add_track_to_or_update_history(
         self,
         station_id: int,
-        subsonic_id: str,
-        artist: str,
-        title: str,
-        album: str,
+        track: Track,
         is_thumbs_downed: bool,
         rating: int = 0,
     ) -> int:
@@ -189,7 +186,7 @@ class StationDB:
                 session.query(TrackHistory)
                 .filter(
                     TrackHistory.station_id == station_id,
-                    TrackHistory.subsonic_id == subsonic_id,
+                    TrackHistory.track_id == track.id,
                 )
                 .first()
             )
@@ -208,11 +205,8 @@ class StationDB:
             else:
                 # Create new record
                 track_history = TrackHistory(
+                    track_id=station.id,
                     station_id=station_id,
-                    subsonic_id=subsonic_id,
-                    artist=artist,
-                    title=title,
-                    album=album,
                     is_thumbs_downed=is_thumbs_downed,
                     rating=rating,
                 )
@@ -232,12 +226,24 @@ class StationDB:
                 .all()
             )
 
+    def get_track_history_all(self, station_id: int) -> List[TrackHistory]:
+        """Get recent tracks played by a station."""
+        with self.Session() as session:
+            return (
+                session.query(TrackHistory)
+                .options(joinedload(TrackHistory.track))  # Eagerly load the track
+                .filter(TrackHistory.station_id == station_id)
+                .order_by(TrackHistory.updated_at.desc())
+                .all()
+            )
+
     def get_thumbs_downed_history(self, station_id: int) -> List[TrackHistory]:
         """Get all thumbs downed tracks by a station."""
         with self.Session() as session:
             return (
                 session.query(TrackHistory)
-                .filter(
+                 .options(joinedload(TrackHistory.track))  # Eagerly load the track
+                 .filter(
                     and_(
                         TrackHistory.station_id == station_id,
                         TrackHistory.is_thumbs_downed == True,
@@ -251,28 +257,27 @@ class StationDB:
         """Get embedding history for a station by fetching embeddings from tracks."""
         with self.Session() as session:
             # Get track history with associated tracks for this station
-            track_histories = (
-                session.query(TrackHistory)
-                .join(Track, TrackHistory.track_id == Track.id)
-                .filter(TrackHistory.station_id == station_id)
-                .order_by(TrackHistory.created_at)
-                .all()
-            )
+            track_histories = self.get_track_history_all(station_id)
             
             # Extract just the embeddings from the tracks
-            embeddings = []
+            history = simulator.make_history()
             for history_item in track_histories:
                 # Get the embedding for this track
                 embedding = feature_helper.track_to_embeddings(history_item.track)
-                embeddings.append(embedding)
+                # Check that embedding has the right dimension (148)
+                if len(embedding) == 148:
+                    history = simulator.add_history(
+                        history, embedding, track_history.rating
+                    )
             
-            return embeddings
+            return history
 
+    # !mwd - TODO: This isn't currently used. Remove?
     def load_station_history(
         self, station_id: int
     ) -> Tuple[List[Any], List[TrackHistory], List[Dict[str, Any]]]:
         """Load embedding history, track history, and thumbs downed history for a station."""
-        tracks = self.get_track_history(station_id)
+        tracks = self.get_track_history_all(station_id)
 
         # Build history from embeddings
         history = simulator.make_history()

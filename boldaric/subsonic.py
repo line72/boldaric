@@ -18,20 +18,20 @@ def make_from_parameters(url: str, username: str, password: str, port: int = 443
     return c
 
 
-def make_stream_link(conn, track):
+def make_stream_link(conn, subsonic_id: str):
     # !mwd - this is a bit hacky, but we can use some internals
     #  to generate a pre-authed URL to directly stream
-    q = conn._getQueryDict({"id": track["metadata"]["subsonic_id"]})
+    q = conn._getQueryDict({"id": subsonic_id})
     req = conn._getRequest("stream.view", q)
 
     full_url = f"{req.full_url}?{req.data.decode('utf-8')}"
     return full_url
 
 
-def make_album_art_link(conn, track):
+def make_album_art_link(conn, subsonnic_id: str):
     # !mwd - this is a bit hacky, but we can use some internals
     #  to generate a pre-authed URL to directly stream
-    q = conn._getQueryDict({"id": track["metadata"]["subsonic_id"]})
+    q = conn._getQueryDict({"id": subsonic_id})
     req = conn._getRequest("getCoverArt.view", q)
 
     full_url = f"{req.full_url}?{req.data.decode('utf-8')}"

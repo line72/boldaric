@@ -27,19 +27,10 @@ DIMENSIONS = 148
 
 
 class TrackMetadata(BaseModel):
-    path: str
+    subsonic_id: str
     artist: str
     album: str
     title: str
-    year: str
-    rating: float = 0.0
-    tagged_genres: list[str]
-    predicted_genres: list[dict]
-    mood: dict
-    technical: dict
-    features: dict
-    musicbrainz_ids: dict
-    subsonic_id: str
 
 
 class VectorDB:
@@ -75,9 +66,17 @@ class VectorDB:
         """Store a track's features"""
         embedding = feature_helper.track_to_embeddings(track)
 
+        metadata = TrackMetadata(
+            subsonic_id=subsoninc_id
+            artist=track.artist,
+            album=track.album,
+            title=track.title
+        ).model_dump()
+        
         self.collection.upsert(
             ids=subsonic_id,
-            embeddings=[embedding]
+            embeddings=[embedding],
+            metadatas=[metadata]
         )
 
     def track_exists(self, subsonic_id: str) -> bool:
@@ -87,7 +86,8 @@ class VectorDB:
         results = self.collection.get(ids=[subsonic_id])
         if results and len(results["ids"]) > 0:
             return {
-                "id": results["ids"][0]
+                "id": results["ids"][0],
+                "metadata": results["metadatas"][0],
             }
         return None
 
@@ -105,7 +105,7 @@ class VectorDB:
         results = self.collection.query(
             query_embeddings=[embedding],
             n_results=n_results * 3,
-            include=["embeddings", "distances"],
+            include=["embeddings", "metadatas", "distances"],
         )
 
         # Process the results
@@ -113,14 +113,21 @@ class VectorDB:
 
         # Iterate through our results and attach some metadata, filter
         # out ignored items, and resort
-        for distance, result_embedding, result_id in zip(
+        for result_meta, distance, result_embedding, result_id in zip(
+            results{"metadatas"][0],
             results["distances"][0],
             results["embeddings"][0],
             results["ids"][0]
         ):
+            # Ignore anything in the ignore list
+            result_tuple = (result_meta.get("artist", ""), result_meta.get("title", ""))
+            if result_tuple in ignore_songs:
+                continue
+            
             final_results.append(
                 {
                     "id": result_id,
+                    "metadata": result_meta,
                     "similarity": 1 - distance
                 }
             )
