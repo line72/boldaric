@@ -28,7 +28,7 @@ def make_stream_link(conn, subsonic_id: str):
     return full_url
 
 
-def make_album_art_link(conn, subsonnic_id: str):
+def make_album_art_link(conn, subsonic_id: str):
     # !mwd - this is a bit hacky, but we can use some internals
     #  to generate a pre-authed URL to directly stream
     q = conn._getQueryDict({"id": subsonic_id})

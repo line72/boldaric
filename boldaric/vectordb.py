@@ -67,7 +67,7 @@ class VectorDB:
         embedding = feature_helper.track_to_embeddings(track)
 
         metadata = TrackMetadata(
-            subsonic_id=subsoninc_id,
+            subsonic_id=subsonic_id,
             artist=track.artist,
             album=track.album,
             title=track.title,
@@ -91,12 +91,10 @@ class VectorDB:
 
     def query_similar(
         self,
-        features: dict,
+        embedding: list[float],
         n_results: int = 5,
-        debug: bool = False,
+        ignore_songs: list[tuple[str, str]] = [],
     ) -> list[dict]:
-        embedding = feature_helper.features_to_embeddings(features)
-
         # query for similar items. We are going to do some filtering,
         #  so we query for 3x more results, but only return the top
         #  n_results

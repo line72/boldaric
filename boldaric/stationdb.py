@@ -205,7 +205,7 @@ class StationDB:
             else:
                 # Create new record
                 track_history = TrackHistory(
-                    track_id=station.id,
+                    track_id=track.id,
                     station_id=station_id,
                     is_thumbs_downed=is_thumbs_downed,
                     rating=rating,
@@ -267,7 +267,7 @@ class StationDB:
                 # Check that embedding has the right dimension (148)
                 if len(embedding) == 148:
                     history = simulator.add_history(
-                        history, embedding, track_history.rating
+                        history, embedding, history_item.rating
                     )
 
             return history

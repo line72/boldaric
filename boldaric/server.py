@@ -76,8 +76,7 @@ def get_next_songs(
     # Both played and thumbs_downed are lists of TrackHistory models
     chunksize = (len(history) + pool._processes - 1) // pool._processes
 
-    averages = boldaric.simulator.attract(pool, history, chunksize)
-    new_features = boldaric.feature_helper.list_to_features(averages)
+    new_embeddings = boldaric.simulator.attract(pool, history, chunksize)
 
     # query similar
     ignore_list = []
@@ -88,7 +87,7 @@ def get_next_songs(
     ignore_list.extend([(x.artist, x.title) for x in played[-replay_song_cooldown:]])
     logger.debug(f"ignoring {ignore_list}")
 
-    tracks = db.query_similar(new_features, n_results=45)
+    tracks = db.query_similar(new_embeddings, n_results=45, ignore_songs=ignore_list)
 
     # resort these, and slightly downvote recent artists
     recent_artists = [x.artist for x in played[-15:]]
