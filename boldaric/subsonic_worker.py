@@ -132,6 +132,9 @@ def get_in(obj: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
             return default
     return current
 
+def add_to_vector_db(vectordb, subsonic_id, track):
+    if not vectordb.track_exists(subsonic_id):
+        vectordb.add_track(subsonic_id, track)
 
 def process_song(song, conn, stationdb, vectordb):
     try:
@@ -140,6 +143,7 @@ def process_song(song, conn, stationdb, vectordb):
         track = stationdb.get_track_by_subsonic_id(subsonic_id)
 
         if track:
+            add_to_vector_db(vectordb, subsonic_id, track)
             # !mwd - In the future, we actually want to validate ALL the fields
             # as it might mean we need to try an process any missing ones
             return {"status": "success", "id": subsonic_id, "path": song["path"]}
@@ -151,8 +155,7 @@ def process_song(song, conn, stationdb, vectordb):
             temp_file.flush()
 
             features = boldaric.extractor.extract_features(temp_file.name)
-            # db.add_track(subsonic_id, features)
-            stationdb.add_track(
+            track = stationdb.add_track(
                 artist=get_in(features, ["metadata", "artist"], ""),
                 album=get_in(features, ["metadata", "album"], ""),
                 track=get_in(features, ["metadata", "title"], ""),
@@ -196,6 +199,7 @@ def process_song(song, conn, stationdb, vectordb):
                 spectral_character_contrast_mean=get_in(features, ["spectral_character", "contrast_mean"], 0.0),
                 spectral_character_valley_std=get_in(features, ["spectral_character", "valley_std"], 0.0),
             )
+            add_to_vector_db(vectordb, subsonic_id, track)
 
         return {"status": "success", "id": subsonic_id, "path": song["path"]}
     except Exception as e:
