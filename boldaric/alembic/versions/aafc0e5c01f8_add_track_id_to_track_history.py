@@ -31,6 +31,8 @@ def upgrade() -> None:
             sa.Column("rating", sa.Integer(), nullable=True, default=0)
         )
 
+        batch_op.drop_index("idx_unique_station_subsonic")
+        
         # Drop redundant columns
         batch_op.drop_column("artist")
         batch_op.drop_column("title")

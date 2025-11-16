@@ -293,8 +293,9 @@ class StationDB:
         # Build thumbs downed from track history
         thumbs_downed = []
         with self.Session() as session:
-            thumbs_downed_tracks = (
+            thumbs_downed = (
                 session.query(TrackHistory)
+                .options(joinedload(TrackHistory.track))  # Eagerly load the track
                 .filter(
                     and_(
                         TrackHistory.station_id == station_id,
@@ -304,17 +305,6 @@ class StationDB:
                 .order_by(TrackHistory.created_at)
                 .all()
             )
-
-            thumbs_downed = [
-                {
-                    "metadata": {
-                        "artist": track.artist,
-                        "title": track.title,
-                        "album": track.album,
-                    }
-                }
-                for track in thumbs_downed_tracks
-            ]
 
         return history, tracks, thumbs_downed
 

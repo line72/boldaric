@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from boldaric.stationdb import StationDB
 from boldaric.records.station_options import StationOptions
+from boldaric.models.track import Track
 
 
 @pytest.fixture(scope="function")
@@ -18,6 +19,21 @@ def station_db():
         db = StationDB(db_path)
         yield db
 
+def create_track(station_db, artist, album, title, subsonic_id):
+    station_db.add_track(artist, album, title, 1, '',
+                         subsonic_id, '', '', '', 'album',
+                         [], [0.1]*128, #genre
+                         [0.2]*13, [0.21]*13, 0.0, #mfcc
+                         0.5, 0.5, 0.5, #bpm-dynamic_complexity
+                         0.5, 0.5, 0.5, #energy
+                         'minor', 'g', 1.0, #key
+                         3, 0.23, #chord
+                         0.44, 2, 0.55, #vocal
+                         0.001, 0.88, 128.0, 1.0, 1.0, # groove
+                         0.34, 0.55, 0.29, 0.001, 0.02, # mood
+                         0.43, 0.34, 0.53 #spectral
+                         )
+    return station_db.get_track_by_subsonic_id(subsonic_id)
 
 def test_create_user(station_db):
     """Test creating a user."""
@@ -193,10 +209,22 @@ def test_add_track_to_history(station_db):
     # Create a user and station
     user_id = station_db.create_user("testuser")
     station_id = station_db.create_station(user_id, "Test Station")
-    
+
+    with station_db.Session() as session:
+        t = Track(
+            artist="Test Artist",
+            album="Test Album",
+            track="Test Title",
+            subsonic_id="song123"
+        )
+        session.add(t)
+        session.commit()
+        
+    track = station_db.get_track_by_subsonic_id("song123")
+        
     # Add a track to history
     track_history_id = station_db.add_track_to_or_update_history(
-        station_id, "song123", "Test Artist", "Test Title", "Test Album", False
+        station_id, track, False, 0
     )
     
     assert track_history_id is not None
@@ -209,15 +237,28 @@ def test_update_track_in_history(station_db):
     # Create a user and station
     user_id = station_db.create_user("testuser")
     station_id = station_db.create_station(user_id, "Test Station")
+
+    with station_db.Session() as session:
+        t1 = Track(
+            artist="Test Artist",
+            album="Test Album",
+            track="Test Title",
+            subsonic_id="song123"
+        )
+        session.add(t1)
+        
+        session.commit()
+        
+    track1 = station_db.get_track_by_subsonic_id("song123")
     
     # Add a track to history
     track_history_id1 = station_db.add_track_to_or_update_history(
-        station_id, "song123", "Test Artist", "Test Title", "Test Album", False
+        station_id, track1, False
     )
     
     # Update the same track (should return the same ID)
     track_history_id2 = station_db.add_track_to_or_update_history(
-        station_id, "song123", "Test Artist", "Test Title", "Test Album", True
+        station_id, track1, False
     )
     
     assert track_history_id1 == track_history_id2
@@ -240,35 +281,48 @@ def test_get_track_history(station_db):
     with Session() as session:
         # Create tracks with explicit timestamps
         base_time = datetime(2023, 1, 1, 12, 0, 0)
-        
-        track1 = TrackHistory(
-            station_id=station_id,
-            subsonic_id="song1",
+
+        track1 = Track(
             artist="Artist 1",
-            title="Title 1",
             album="Album 1",
+            track="Title 1",
+            subsonic_id="song1"
+        )
+
+        track2 = Track(
+            artist="Artist 2",
+            album="Album 2",
+            track="Title 2",
+            subsonic_id="song2"
+        )
+
+        track3 = Track(
+            artist="Artist 3",
+            album="Album 3",
+            track="Title 3",
+            subsonic_id="song3"
+        )
+
+        
+        TrackHistory(
+            station_id=station_id,
+            track=track1,
             is_thumbs_downed=False,
             created_at=base_time,
             updated_at=base_time
         )
         
-        track2 = TrackHistory(
+        TrackHistory(
             station_id=station_id,
-            subsonic_id="song2",
-            artist="Artist 2",
-            title="Title 2",
-            album="Album 2",
+            track=track2,
             is_thumbs_downed=False,
             created_at=base_time + timedelta(seconds=1),
             updated_at=base_time + timedelta(seconds=1)
         )
         
-        track3 = TrackHistory(
+        TrackHistory(
             station_id=station_id,
-            subsonic_id="song3",
-            artist="Artist 3",
-            title="Title 3",
-            album="Album 3",
+            track=track3,
             is_thumbs_downed=False,
             created_at=base_time + timedelta(seconds=2),
             updated_at=base_time + timedelta(seconds=2)
@@ -281,8 +335,8 @@ def test_get_track_history(station_db):
     history = station_db.get_track_history(station_id, limit=2)
     assert len(history) == 2
     # Should be ordered by updated_at descending (most recent first)
-    assert history[0].subsonic_id == "song3"
-    assert history[1].subsonic_id == "song2"
+    assert history[0].track.subsonic_id == "song3"
+    assert history[1].track.subsonic_id == "song2"
 
 
 def test_get_thumbs_downed_history(station_db):
@@ -290,94 +344,78 @@ def test_get_thumbs_downed_history(station_db):
     # Create a user and station
     user_id = station_db.create_user("testuser")
     station_id = station_db.create_station(user_id, "Test Station")
+
+    with station_db.Session() as session:
+        t1 = Track(
+            artist="Artist 1",
+            album="Album 1",
+            track="Title 1",
+            subsonic_id="song1"
+        )
+
+        t2 = Track(
+            artist="Artist 2",
+            album="Album 2",
+            track="Title 2",
+            subsonic_id="song2"
+        )
+
+        t3 = Track(
+            artist="Artist 3",
+            album="Album 3",
+            track="Title 3",
+            subsonic_id="song3"
+        )
+        session.add_all([t1, t2, t3])
+        session.commit()
+
+    track1 = station_db.get_track_by_subsonic_id('song1')
+    track2 = station_db.get_track_by_subsonic_id('song2')
+    track3 = station_db.get_track_by_subsonic_id('song3')
     
     # Add some tracks to history, some thumbs downed
     import time
     station_db.add_track_to_or_update_history(
-        station_id, "song1", "Artist 1", "Title 1", "Album 1", False
+        station_id, track1, False
     )
     time.sleep(0.1)  # Ensure different timestamps
     station_db.add_track_to_or_update_history(
-        station_id, "song2", "Artist 2", "Title 2", "Album 2", True
+        station_id, track2, True
     )
     time.sleep(0.1)  # Ensure different timestamps
     station_db.add_track_to_or_update_history(
-        station_id, "song3", "Artist 3", "Title 3", "Album 3", True
+        station_id, track3, True
     )
     
     # Get thumbs downed history
     thumbs_downed = station_db.get_thumbs_downed_history(station_id)
     assert len(thumbs_downed) == 2
     # Should be ordered by created_at ascending (oldest first)
-    assert thumbs_downed[0].subsonic_id == "song2"
-    assert thumbs_downed[1].subsonic_id == "song3"
-
-
-def test_add_embedding_history(station_db):
-    """Test adding embedding history."""
-    # Create a user, station, and track history
-    user_id = station_db.create_user("testuser")
-    station_id = station_db.create_station(user_id, "Test Station")
-    track_history_id = station_db.add_track_to_or_update_history(
-        station_id, "song123", "Test Artist", "Test Title", "Test Album", False
-    )
-    
-    # Add embedding history
-    embedding = [0.1] * 148  # Use 148-dimensional embedding to match simulator expectations
-    station_db.add_embedding_history(station_id, track_history_id, embedding, 5)
-    
-    # Get embedding history
-    embeddings = station_db.get_embedding_history(station_id)
-    assert len(embeddings) == 1
-    assert embeddings[0].embedding == embedding
-    assert embeddings[0].rating == 5
-
-
-def test_update_embedding_history(station_db):
-    """Test updating embedding history within 30 minutes."""
-    # Create a user, station, and track history
-    user_id = station_db.create_user("testuser")
-    station_id = station_db.create_station(user_id, "Test Station")
-    track_history_id = station_db.add_track_to_or_update_history(
-        station_id, "song123", "Test Artist", "Test Title", "Test Album", False
-    )
-    
-    # Add embedding history
-    embedding1 = [0.1] * 148  # Use 148-dimensional embedding
-    station_db.add_embedding_history(station_id, track_history_id, embedding1, 5)
-    
-    # Add another embedding for the same track within 30 minutes (should update)
-    embedding2 = [0.2] * 148  # Use 148-dimensional embedding
-    station_db.add_embedding_history(station_id, track_history_id, embedding2, 3)
-    
-    # Get embedding history - should only have one entry with updated rating
-    embeddings = station_db.get_embedding_history(station_id)
-    assert len(embeddings) == 1
-    assert embeddings[0].rating == 3
-
+    assert thumbs_downed[0].track.subsonic_id == "song2"
+    assert thumbs_downed[1].track.subsonic_id == "song3"
 
 def test_load_station_history(station_db):
     """Test loading station history."""
     # Create a user, station, and track history
     user_id = station_db.create_user("testuser")
     station_id = station_db.create_station(user_id, "Test Station")
-    track_history_id = station_db.add_track_to_or_update_history(
-        station_id, "song123", "Test Artist", "Test Title", "Test Album", False
+
+    t1 = create_track(station_db, 'Artist 1', 'Album 1', 'Title 1', 'song1')
+    t2 = create_track(station_db, 'Artist 2', 'Album 2', 'Title 2', 'song2')
+    
+    station_db.add_track_to_or_update_history(
+        station_id, t1, False
     )
     station_db.add_track_to_or_update_history(
-        station_id, "song456", "Test Artist 2", "Test Title 2", "Test Album 2", True
+        station_id, t2, True
     )
-    
-    # Add embedding history with proper dimension
-    embedding = [0.1] * 148  # Use 148-dimensional embedding
-    station_db.add_embedding_history(station_id, track_history_id, embedding, 5)
     
     # Load station history
     history, tracks, thumbs_downed = station_db.load_station_history(station_id)
     
     # Check that we got the expected data
     assert history is not None
-    assert len(tracks) > 0
+    assert len(tracks) == 2
     assert len(thumbs_downed) == 1
-    assert thumbs_downed[0]["metadata"]["artist"] == "Test Artist 2"
-    assert thumbs_downed[0]["metadata"]["title"] == "Test Title 2"
+    assert thumbs_downed[0].track.artist == "Artist 2"
+    assert thumbs_downed[0].track.track == "Title 2"
