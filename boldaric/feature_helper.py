@@ -17,7 +17,8 @@ from .models.track import Track
 # Keep track of the version
 #  If we ever change normalization or embed
 #  we'll update this
-VERSION=2
+VERSION = 2
+
 
 def track_to_embeddings(track: Track) -> list[float]:
     """Convert the meteadata from a track into an embedding
@@ -26,7 +27,7 @@ def track_to_embeddings(track: Track) -> list[float]:
     # !mwd - Unlike what I was doing previously in
     # features_to_embeddings, I am NOT normalizing any of these
     # values here.
-    
+
     embedding = []
 
     # 1. Genre Embeddings (128D)
@@ -54,11 +55,12 @@ def track_to_embeddings(track: Track) -> list[float]:
         track.mood_happiness,
         track.mood_partiness,
         track.mood_relaxedness,
-        track.mood_sadness
+        track.mood_sadness,
     ]
     embedding.extend(mood_features)
 
     return embedding
+
 
 # def features_to_embeddings(features: dict) -> list[float]:
 #     """Convert a feature list from metadata or the extractor into

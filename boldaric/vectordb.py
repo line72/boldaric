@@ -67,16 +67,14 @@ class VectorDB:
         embedding = feature_helper.track_to_embeddings(track)
 
         metadata = TrackMetadata(
-            subsonic_id=subsoninc_id
+            subsonic_id=subsoninc_id,
             artist=track.artist,
             album=track.album,
-            title=track.title
+            title=track.title,
         ).model_dump()
-        
+
         self.collection.upsert(
-            ids=subsonic_id,
-            embeddings=[embedding],
-            metadatas=[metadata]
+            ids=subsonic_id, embeddings=[embedding], metadatas=[metadata]
         )
 
     def track_exists(self, subsonic_id: str) -> bool:
@@ -114,22 +112,18 @@ class VectorDB:
         # Iterate through our results and attach some metadata, filter
         # out ignored items, and resort
         for result_meta, distance, result_embedding, result_id in zip(
-            results{"metadatas"][0],
+            results["metadatas"][0],
             results["distances"][0],
             results["embeddings"][0],
-            results["ids"][0]
+            results["ids"][0],
         ):
             # Ignore anything in the ignore list
             result_tuple = (result_meta.get("artist", ""), result_meta.get("title", ""))
             if result_tuple in ignore_songs:
                 continue
-            
+
             final_results.append(
-                {
-                    "id": result_id,
-                    "metadata": result_meta,
-                    "similarity": 1 - distance
-                }
+                {"id": result_id, "metadata": result_meta, "similarity": 1 - distance}
             )
 
         # resort

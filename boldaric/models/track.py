@@ -7,9 +7,10 @@ from typing import Optional
 
 from . import Base
 
+
 class Track(Base):
-    __tablename__ = 'tracks'
-    
+    __tablename__ = "tracks"
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     artist = Column(String)
     album = Column(String)
@@ -54,33 +55,37 @@ class Track(Base):
     spectral_character_valley_std = Column(Float)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    
+
     # Relationships
     track_genres = relationship("TrackGenre", back_populates="track")
-    history_entries = relationship("TrackHistory", back_populates="track")  # Added relationship
-    
+    history_entries = relationship(
+        "TrackHistory", back_populates="track"
+    )  # Added relationship
+
     @hybrid_property
     def genre_embedding_array(self) -> Optional[np.ndarray]:
         """Get the genre embedding as a numpy array"""
         if self.genre_embedding is None:
             return None
         return np.frombuffer(bytes(self.genre_embedding), dtype=np.float64)
-    
+
     @hybrid_property
     def mfcc_mean_array(self) -> Optional[np.ndarray]:
         """Get the mfcc mean as a numpy array"""
         if self.mfcc_mean is None:
             return None
         return np.frombuffer(bytes(self.mfcc_mean), dtype=np.float64)
-    
+
     @hybrid_property
     def mfcc_covariance_array(self) -> Optional[np.ndarray]:
         """Get the mfcc covariance as a numpy array"""
         if self.mfcc_covariance is None:
             return None
         # Assuming a 13x13 covariance matrix for MFCC features
-        return np.frombuffer(bytes(self.mfcc_covariance), dtype=np.float64).reshape((13, 13))
-    
+        return np.frombuffer(bytes(self.mfcc_covariance), dtype=np.float64).reshape(
+            (13, 13)
+        )
+
     @hybrid_property
     def genres(self):
         """Get list of genre names for this track"""

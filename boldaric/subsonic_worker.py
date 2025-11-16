@@ -132,9 +132,11 @@ def get_in(obj: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
             return default
     return current
 
+
 def add_to_vector_db(vectordb, subsonic_id, track):
     if not vectordb.track_exists(subsonic_id):
         vectordb.add_track(subsonic_id, track)
+
 
 def process_song(song, conn, stationdb, vectordb):
     try:
@@ -163,42 +165,84 @@ def process_song(song, conn, stationdb, vectordb):
                     track_number=get_in(features, ["metadata", "tracknumber"], 0),
                     genre=";".join(get_in(features, ["metadata", "genre"], [])),
                     subsonic_id=subsonic_id,
-                    musicbrainz_artistid=get_in(features, ["metadata", "musicbrainz_artistid"], ""),
-                    musicbrainz_albumid=get_in(features, ["metadata", "musicbrainz_releasegroupid"], ""),
-                    musicbrainz_trackid=get_in(features, ["metadata", "musicbrainz_releasetrackid"], ""),
+                    musicbrainz_artistid=get_in(
+                        features, ["metadata", "musicbrainz_artistid"], ""
+                    ),
+                    musicbrainz_albumid=get_in(
+                        features, ["metadata", "musicbrainz_releasegroupid"], ""
+                    ),
+                    musicbrainz_trackid=get_in(
+                        features, ["metadata", "musicbrainz_releasetrackid"], ""
+                    ),
                     releasetype=get_in(features, ["metadata", "releasetype"], ""),
                     genre_list=get_in(features, ["genre"], []),
                     genre_embedding=get_in(features, ["genre_embeddings"], []),
                     mfcc_covariance=get_in(features, ["mfcc", "covariance"], []),
                     mfcc_mean=get_in(features, ["mfcc", "mean"], []),
-                    mfcc_temporal_variation=get_in(features, ["mfcc", "temporal_variation"], 0.0),
+                    mfcc_temporal_variation=get_in(
+                        features, ["mfcc", "temporal_variation"], 0.0
+                    ),
                     bpm=get_in(features, ["bpm"], 0.0),
                     loudness=get_in(features, ["loudness"], 0.0),
                     dynamic_complexity=get_in(features, ["dynamic_complexity"], 0.0),
                     energy_curve_mean=get_in(features, ["energy_curve", "mean"], 0.0),
                     energy_curve_std=get_in(features, ["energy_curve", "std"], 0.0),
-                    energy_curve_peak_count=get_in(features, ["energy_curve", "peak_count"], 0),
+                    energy_curve_peak_count=get_in(
+                        features, ["energy_curve", "peak_count"], 0
+                    ),
                     key_tonic=get_in(features, ["key", "tonic"], ""),
                     key_scale=get_in(features, ["key", "scale"], ""),
                     key_confidence=get_in(features, ["key", "confidence"], 0.0),
-                    chord_unique_chords=get_in(features, ["chord_stability", "unique_chords"], 0),
-                    chord_change_rate=get_in(features, ["chord_stability", "change_rate"], 0.0),
-                    vocal_pitch_presence_ratio=get_in(features, ["vocal", "pitch_presence_ratio"], 0.0),
-                    vocal_pitch_segment_count=get_in(features, ["vocal", "pitch_segment_count"], 0),
-                    vocal_avg_pitch_duration=get_in(features, ["vocal", "avg_pitch_duration"], 0.0),
-                    groove_beat_consistency=get_in(features, ["groove", "beat_consistency"], 0.0),
-                    groove_danceability=get_in(features, ["groove", "danceability"], 0.0),
+                    chord_unique_chords=get_in(
+                        features, ["chord_stability", "unique_chords"], 0
+                    ),
+                    chord_change_rate=get_in(
+                        features, ["chord_stability", "change_rate"], 0.0
+                    ),
+                    vocal_pitch_presence_ratio=get_in(
+                        features, ["vocal", "pitch_presence_ratio"], 0.0
+                    ),
+                    vocal_pitch_segment_count=get_in(
+                        features, ["vocal", "pitch_segment_count"], 0
+                    ),
+                    vocal_avg_pitch_duration=get_in(
+                        features, ["vocal", "avg_pitch_duration"], 0.0
+                    ),
+                    groove_beat_consistency=get_in(
+                        features, ["groove", "beat_consistency"], 0.0
+                    ),
+                    groove_danceability=get_in(
+                        features, ["groove", "danceability"], 0.0
+                    ),
                     groove_dnc_bpm=get_in(features, ["groove", "dnc_bpm"], 0.0),
                     groove_syncopation=get_in(features, ["groove", "syncopation"], 0.0),
-                    groove_tempo_stability=get_in(features, ["groove", "tempo_stability"], 0.0),
-                    mood_aggressiveness=get_in(features, ["mood", "probabilities", "aggressive"], 0.0),
-                    mood_happiness=get_in(features, ["mood", "probabilities", "happy"], 0.0),
-                    mood_partiness=get_in(features, ["mood", "probabilities", "party"], 0.0),
-                    mood_relaxedness=get_in(features, ["mood", "probabilities", "relaxed"], 0.0),
-                    mood_sadness=get_in(features, ["mood", "probabilities", "sad"], 0.0),
-                    spectral_character_brightness=get_in(features, ["spectral_character", "brightness"], 0.0),
-                    spectral_character_contrast_mean=get_in(features, ["spectral_character", "contrast_mean"], 0.0),
-                    spectral_character_valley_std=get_in(features, ["spectral_character", "valley_std"], 0.0),
+                    groove_tempo_stability=get_in(
+                        features, ["groove", "tempo_stability"], 0.0
+                    ),
+                    mood_aggressiveness=get_in(
+                        features, ["mood", "probabilities", "aggressive"], 0.0
+                    ),
+                    mood_happiness=get_in(
+                        features, ["mood", "probabilities", "happy"], 0.0
+                    ),
+                    mood_partiness=get_in(
+                        features, ["mood", "probabilities", "party"], 0.0
+                    ),
+                    mood_relaxedness=get_in(
+                        features, ["mood", "probabilities", "relaxed"], 0.0
+                    ),
+                    mood_sadness=get_in(
+                        features, ["mood", "probabilities", "sad"], 0.0
+                    ),
+                    spectral_character_brightness=get_in(
+                        features, ["spectral_character", "brightness"], 0.0
+                    ),
+                    spectral_character_contrast_mean=get_in(
+                        features, ["spectral_character", "contrast_mean"], 0.0
+                    ),
+                    spectral_character_valley_std=get_in(
+                        features, ["spectral_character", "valley_std"], 0.0
+                    ),
                 )
                 #!mwd - For some reason, the track that comes back from add_track
                 #  doesn't work, so just fetch it again.

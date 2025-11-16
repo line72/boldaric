@@ -117,7 +117,11 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
         "musicbrainz_releasegroupid": ["MUSICBRAINZ_RELEASEGROUPID"],
         "musicbrainz_workid": ["MUSICBRAINZ_WORKID"],
         "tracknumber": ["TRCK", "trkn", "TRACKNUMBER"],
-        "releasetype": ["MusicBrainz Album Type", "RELEASETYPE", "MUSICBRAINZ_ALBUMTYPE"],
+        "releasetype": [
+            "MusicBrainz Album Type",
+            "RELEASETYPE",
+            "MUSICBRAINZ_ALBUMTYPE",
+        ],
     }
 
     if hasattr(audio_file, "tags"):

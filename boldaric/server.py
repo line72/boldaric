@@ -243,9 +243,7 @@ async def make_station(request):
             params.ignore_live,
         )
 
-        station_db.add_track_to_or_update_history(
-            station_id, track, False, SEED_RATING
-        )
+        station_db.add_track_to_or_update_history(station_id, track, False, SEED_RATING)
 
         stream_url = boldaric.subsonic.make_stream_link(sub_conn, track.subsonic_id)
         cover_url = boldaric.subsonic.make_album_art_link(sub_conn, track.subsonic_id)
@@ -323,9 +321,15 @@ async def get_next_song_for_station(request):
         if len(top_tracks) > 0:
 
             def make_response(t):
-                track = station_db.get_track_by_subsonnic_id(t["metadata"]["subsonic_id"])
-                stream_url = boldaric.subsonic.make_stream_link(sub_conn, track.subsonic_id)
-                cover_url = boldaric.subsonic.make_album_art_link(sub_conn, track.subsonic_id)
+                track = station_db.get_track_by_subsonnic_id(
+                    t["metadata"]["subsonic_id"]
+                )
+                stream_url = boldaric.subsonic.make_stream_link(
+                    sub_conn, track.subsonic_id
+                )
+                cover_url = boldaric.subsonic.make_album_art_link(
+                    sub_conn, track.subsonic_id
+                )
 
                 return {
                     "url": stream_url,
@@ -438,10 +442,7 @@ async def add_seed(request):
         track = station_db.get_track_by_subsonic_id(song_id)
 
         track_history_id = station_db.add_track_to_or_update_history(
-            station_id,
-            track,
-            False,
-            SEED_RATING
+            station_id, track, False, SEED_RATING
         )
 
         return web.json_response({"success": True})
@@ -461,10 +462,7 @@ async def add_song_to_history(request):
 
         track = station_db.get_track_by_subsonic_id(song_id)
         track_history_id = station_db.add_track_to_or_update_history(
-            station_id,
-            track,
-            False,
-            DEFAULT_RATING
+            station_id, track, False, DEFAULT_RATING
         )
 
         return web.json_response({"success": True})
@@ -486,10 +484,7 @@ async def thumbs_up(request):
 
         track = station_db.get_track_by_subsonic_id(song_id)
         track_history_id = station_db.add_track_to_or_update_history(
-            station_id,
-            track,
-            False,
-            THUMBS_UP_RATING
+            station_id, track, False, THUMBS_UP_RATING
         )
 
         return web.json_response({"success": True})
@@ -509,10 +504,7 @@ async def thumbs_down(request):
 
         track = station_db.get_track_by_subsonic_id(song_id)
         track_history_id = station_db.add_track_to_or_update_history(
-            station_id,
-            track,
-            True,
-            THUMBS_DOWN_RATING
+            station_id, track, True, THUMBS_DOWN_RATING
         )
 
         return web.json_response({"success": True})

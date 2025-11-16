@@ -242,8 +242,8 @@ class StationDB:
         with self.Session() as session:
             return (
                 session.query(TrackHistory)
-                 .options(joinedload(TrackHistory.track))  # Eagerly load the track
-                 .filter(
+                .options(joinedload(TrackHistory.track))  # Eagerly load the track
+                .filter(
                     and_(
                         TrackHistory.station_id == station_id,
                         TrackHistory.is_thumbs_downed == True,
@@ -258,7 +258,7 @@ class StationDB:
         with self.Session() as session:
             # Get track history with associated tracks for this station
             track_histories = self.get_track_history_all(station_id)
-            
+
             # Extract just the embeddings from the tracks
             history = simulator.make_history()
             for history_item in track_histories:
@@ -269,7 +269,7 @@ class StationDB:
                     history = simulator.add_history(
                         history, embedding, track_history.rating
                     )
-            
+
             return history
 
     # !mwd - TODO: This isn't currently used. Remove?
@@ -373,20 +373,20 @@ class StationDB:
             if isinstance(arr, list):
                 arr = np.array(arr)
             return arr.tobytes()
-        
+
         genre_embedding_bytes = serialize_array(genre_embedding)
         mfcc_covariance_bytes = serialize_array(mfcc_covariance)
         mfcc_mean_bytes = serialize_array(mfcc_mean)
-        
+
         with self.Session() as session:
             # Check if track already exists
-            existing_track = session.query(Track).filter(
-                Track.subsonic_id == subsonic_id
-            ).first()
-            
+            existing_track = (
+                session.query(Track).filter(Track.subsonic_id == subsonic_id).first()
+            )
+
             if existing_track:
                 return existing_track
-            
+
             # Create a new track record
             track_record = Track(
                 artist=artist,
@@ -431,7 +431,7 @@ class StationDB:
                 spectral_character_contrast_mean=spectral_character_contrast_mean,
                 spectral_character_valley_std=spectral_character_valley_std,
             )
-            
+
             session.add(track_record)
             session.commit()
 
@@ -440,33 +440,31 @@ class StationDB:
                 for genre_item in genre_list:
                     genre_label = genre_item["label"]
                     genre_score = genre_item["score"]
-                    
+
                     # Check if genre already exists
-                    genre = session.query(Genre).filter(Genre.label == genre_label).first()
+                    genre = (
+                        session.query(Genre).filter(Genre.label == genre_label).first()
+                    )
                     if not genre:
                         # Create new genre if it doesn't exist
                         genre = Genre(label=genre_label)
                         session.add(genre)
                         session.flush()  # Get the genre ID without committing
-                    
+
                     # Create track-genre relationship with score
                     track_genre = TrackGenre(
-                        track_id=track_record.id,
-                        genre_id=genre.id,
-                        score=genre_score
+                        track_id=track_record.id, genre_id=genre.id, score=genre_score
                     )
                     session.add(track_genre)
-                
+
                 session.commit()
-            
+
             # Merge the track back into the session
             track_record = session.merge(track_record)
-            
+
             return track_record
 
     def get_track_by_subsonic_id(self, subsonic_id: str) -> Track | None:
         """Get a track based on subsonic id"""
         with self.Session() as session:
-            return session.query(Track).filter(
-                Track.subsonic_id == subsonic_id
-            ).first()
+            return session.query(Track).filter(Track.subsonic_id == subsonic_id).first()
