@@ -16,18 +16,18 @@ import os
 from importlib import resources
 
 from . import simulator
+from . import feature_helper
 from .records.station_options import StationOptions
 
 from alembic import command
 from alembic.config import Config
 
 from sqlalchemy import create_engine, and_, or_, func
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session, joinedload
 
 from .models.user import User
 from .models.station import Station
 from .models.track_history import TrackHistory
-from .models.embedding_history import EmbeddingHistory
 from .models.track import Track
 from .models.genre import Genre
 from .models.track_genre import TrackGenre
@@ -220,6 +220,7 @@ class StationDB:
         with self.Session() as session:
             return (
                 session.query(TrackHistory)
+                .options(joinedload(TrackHistory.track))  # Eagerly load the track
                 .filter(TrackHistory.station_id == station_id)
                 .order_by(TrackHistory.updated_at.desc())
                 .limit(limit)
@@ -241,81 +242,42 @@ class StationDB:
                 .all()
             )
 
-    def add_embedding_history(
-        self,
-        station_id: int,
-        track_history_id: int,
-        embedding: List[float],
-        rating: int,
-    ) -> None:
-        """Add an embedding to the station's history."""
+    def get_embedding_history(self, station_id: int) -> List[List[float]]:
+        """Get embedding history for a station by fetching embeddings from tracks."""
         with self.Session() as session:
-            # Query for embeddings that match this track_history_id
-            # AND were created in the previous 30 minutes OR is the
-            # most recent embedding for this station
-            thirty_minutes_ago = datetime.now() - timedelta(minutes=30)
-
-            recent_embedding = (
-                session.query(EmbeddingHistory)
-                .filter(
-                    and_(
-                        EmbeddingHistory.station_id == station_id,
-                        EmbeddingHistory.track_history_id == track_history_id,
-                        or_(
-                            EmbeddingHistory.created_at >= thirty_minutes_ago,
-                            EmbeddingHistory.id
-                            == session.query(func.max(EmbeddingHistory.id))
-                            .filter(EmbeddingHistory.station_id == station_id)
-                            .scalar_subquery(),
-                        ),
-                    )
-                )
-                .order_by(EmbeddingHistory.created_at.desc())
-                .first()
-            )
-
-            # we have a recent embedding, if this was created in the last 30 minutes,
-            # then just update it instead of creating a second one. Likely, the client
-            # did something dumb, and played a song twice in a row or something...
-            if recent_embedding:
-                # Update it
-                recent_embedding.rating = rating
-            else:
-                # Create new embedding
-                embedding_history = EmbeddingHistory(
-                    station_id=station_id,
-                    track_history_id=track_history_id,
-                    embedding=embedding,
-                    rating=rating,
-                )
-                session.add(embedding_history)
-
-            session.commit()
-
-    def get_embedding_history(self, station_id: int) -> List[EmbeddingHistory]:
-        """Get embedding history for a station."""
-        with self.Session() as session:
-            return (
-                session.query(EmbeddingHistory)
-                .filter(EmbeddingHistory.station_id == station_id)
-                .order_by(EmbeddingHistory.created_at)
+            # Get track history with associated tracks for this station
+            track_histories = (
+                session.query(TrackHistory)
+                .join(Track, TrackHistory.track_id == Track.id)
+                .filter(TrackHistory.station_id == station_id)
+                .order_by(TrackHistory.created_at)
                 .all()
             )
+            
+            # Extract just the embeddings from the tracks
+            embeddings = []
+            for history_item in track_histories:
+                # Get the embedding for this track
+                embedding = feature_helper.track_to_embeddings(history_item.track)
+                embeddings.append(embedding)
+            
+            return embeddings
 
     def load_station_history(
         self, station_id: int
     ) -> Tuple[List[Any], List[TrackHistory], List[Dict[str, Any]]]:
         """Load embedding history, track history, and thumbs downed history for a station."""
-        embeddings = self.get_embedding_history(station_id)
         tracks = self.get_track_history(station_id)
 
         # Build history from embeddings
         history = simulator.make_history()
-        for embedding in embeddings:
+        for track_history in tracks:
+            # Get the embedding for this track
+            embedding = feature_helper.track_to_embeddings(track_history.track)
             # Check that embedding has the right dimension (148)
-            if len(embedding.embedding) == 148:
+            if len(embedding) == 148:
                 history = simulator.add_history(
-                    history, embedding.embedding, embedding.rating
+                    history, embedding, track_history.rating
                 )
 
         # Build thumbs downed from track history
