@@ -57,6 +57,7 @@ class Track(Base):
     
     # Relationships
     track_genres = relationship("TrackGenre", back_populates="track")
+    history_entries = relationship("TrackHistory", back_populates="track")  # Added relationship
     
     @hybrid_property
     def genre_embedding_array(self) -> Optional[np.ndarray]:
