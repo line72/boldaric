@@ -10,6 +10,7 @@ class TrackHistory(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     station_id = Column(Integer, ForeignKey("stations.id"), nullable=False)
     is_thumbs_downed = Column(Boolean, default=False)
+    rating = Column(Integer, default=0)  # Add rating column
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
