@@ -180,6 +180,7 @@ class StationDB:
         title: str,
         album: str,
         is_thumbs_downed: bool,
+        rating: int = 0,
     ) -> int:
         """Add a track to the station's history. If it is recent, update the existing row"""
         with self.Session() as session:
@@ -199,6 +200,9 @@ class StationDB:
                 # Only update thumbs_downed if it's being set to True
                 if is_thumbs_downed:
                     track_history.is_thumbs_downed = is_thumbs_downed
+                # Update rating if provided
+                if rating != 0:
+                    track_history.rating = rating
                 session.commit()
                 return track_history.id
             else:
@@ -210,6 +214,7 @@ class StationDB:
                     title=title,
                     album=album,
                     is_thumbs_downed=is_thumbs_downed,
+                    rating=rating,
                 )
                 session.add(track_history)
                 session.commit()
