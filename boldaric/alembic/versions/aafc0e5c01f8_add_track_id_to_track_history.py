@@ -23,6 +23,9 @@ def upgrade() -> None:
     op.add_column('track_history', sa.Column('track_id', sa.Integer(), nullable=True))
     op.create_foreign_key(None, 'track_history', 'tracks', ['track_id'], ['id'])
     
+    # Add rating column to track_history
+    op.add_column('track_history', sa.Column('rating', sa.Integer(), nullable=True, default=0))
+
     # Drop redundant columns
     op.drop_column('track_history', 'artist')
     op.drop_column('track_history', 'title')
@@ -36,6 +39,9 @@ def downgrade() -> None:
     op.add_column('track_history', sa.Column('album', sa.VARCHAR(), nullable=False))
     op.add_column('track_history', sa.Column('title', sa.VARCHAR(), nullable=False))
     op.add_column('track_history', sa.Column('artist', sa.VARCHAR(), nullable=False))
+    
+    # Remove rating column from track_history
+    op.drop_column('track_history', 'rating')
     
     # Drop foreign key and track_id column
     op.drop_constraint(None, 'track_history', type_='foreignkey')
