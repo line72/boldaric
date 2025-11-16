@@ -487,6 +487,8 @@ class StationDB:
                 
                 session.commit()
             
+            # Merge the track back into the session
+            track_record = session.merge(track_record)
             
             return track_record
 

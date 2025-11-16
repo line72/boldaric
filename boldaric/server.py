@@ -231,7 +231,7 @@ async def make_station(request):
         except ValidationError as e:
             return web.json_response({"error": e.errors()}, status=400)
 
-        track = vec_db.get_track(params.song_id)
+        track = station_db.get_track_by_subsonnic_id(params.song_id)
         if not track:
             return web.json_response({"error": "Invalid `song_id`"}, status=400)
 
