@@ -20,34 +20,38 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # Add track_id column as nullable first
-    op.add_column("track_history", sa.Column("track_id", sa.Integer(), nullable=True))
-    op.create_foreign_key(None, "track_history", "tracks", ["track_id"], ["id"])
+    # Use batch mode for SQLite compatibility
+    with op.batch_alter_table("track_history") as batch_op:
+        # Add track_id column as nullable first
+        batch_op.add_column(sa.Column("track_id", sa.Integer(), nullable=True))
+        batch_op.create_foreign_key("fk_track_history_tracks", "tracks", ["track_id"], ["id"])
 
-    # Add rating column to track_history
-    op.add_column(
-        "track_history", sa.Column("rating", sa.Integer(), nullable=True, default=0)
-    )
+        # Add rating column to track_history
+        batch_op.add_column(
+            sa.Column("rating", sa.Integer(), nullable=True, default=0)
+        )
 
-    # Drop redundant columns
-    op.drop_column("track_history", "artist")
-    op.drop_column("track_history", "title")
-    op.drop_column("track_history", "album")
-    op.drop_column("track_history", "subsonic_id")
+        # Drop redundant columns
+        batch_op.drop_column("artist")
+        batch_op.drop_column("title")
+        batch_op.drop_column("album")
+        batch_op.drop_column("subsonic_id")
 
 
 def downgrade() -> None:
-    # Re-add dropped columns
-    op.add_column(
-        "track_history", sa.Column("subsonic_id", sa.VARCHAR(), nullable=False)
-    )
-    op.add_column("track_history", sa.Column("album", sa.VARCHAR(), nullable=False))
-    op.add_column("track_history", sa.Column("title", sa.VARCHAR(), nullable=False))
-    op.add_column("track_history", sa.Column("artist", sa.VARCHAR(), nullable=False))
+    # Use batch mode for SQLite compatibility
+    with op.batch_alter_table("track_history") as batch_op:
+        # Re-add dropped columns
+        batch_op.add_column(
+            sa.Column("subsonic_id", sa.VARCHAR(), nullable=False)
+        )
+        batch_op.add_column("track_history", sa.Column("album", sa.VARCHAR(), nullable=False))
+        batch_op.add_column("track_history", sa.Column("title", sa.VARCHAR(), nullable=False))
+        batch_op.add_column("track_history", sa.Column("artist", sa.VARCHAR(), nullable=False))
 
-    # Remove rating column from track_history
-    op.drop_column("track_history", "rating")
+        # Remove rating column from track_history
+        batch_op.drop_column("rating")
 
-    # Drop foreign key and track_id column
-    op.drop_constraint(None, "track_history", type_="foreignkey")
-    op.drop_column("track_history", "track_id")
+        # Drop foreign key and track_id column
+        batch_op.drop_constraint("fk_track_history_tracks", type_="foreignkey")
+        batch_op.drop_column("track_id")

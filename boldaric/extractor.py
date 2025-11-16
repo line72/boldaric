@@ -13,6 +13,7 @@ import os
 
 import numpy as np
 from mutagen import File
+from mutagen.id3 import TRCK
 
 from importlib.resources import files
 
@@ -111,16 +112,19 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
         "rating": ["POPM", "RATING", "RATING WMP", "RATING AMAZON"],
         "musicbrainz_releasetrackid": [
             "UFID:http://musicbrainz.org",
+            "TXXX:MUSICBRAINZ_RELEASETRACKID",
             "MUSICBRAINZ_RELEASETRACKID",
         ],
-        "musicbrainz_artistid": ["MUSICBRAINZ_ARTISTID"],
-        "musicbrainz_releasegroupid": ["MUSICBRAINZ_RELEASEGROUPID"],
-        "musicbrainz_workid": ["MUSICBRAINZ_WORKID"],
-        "tracknumber": ["TRCK", "trkn", "TRACKNUMBER"],
+        "musicbrainz_artistid": ["TXXX:MUSICBRAINZ_ARTISTID", "MUSICBRAINZ_ARTISTID"],
+        "musicbrainz_releasegroupid": ["TXXX:MUSICBRAINZ_RELEASEGROUPID", "MUSICBRAINZ_RELEASEGROUPID"],
+        "musicbrainz_workid": ["TXXX:MUSICBRAINZ_WORKID", "MUSICBRAINZ_WORKID"],
+        "tracknumber": ["TRCK", "trkn", "TRACKNUMBER", "TXXX:TRACKNUMBER"],
         "releasetype": [
             "MusicBrainz Album Type",
-            "RELEASETYPE",
-            "MUSICBRAINZ_ALBUMTYPE",
+            "TXXX:RELEASETYPE",
+            "RELEASETYPE"
+            "TXXX:MUSICBRAINZ_ALBUMTYPE",
+            "MUSICBRAINZ_ALBUMTYPE"
         ],
     }
 
@@ -153,7 +157,11 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
                             # Handle track number parsing
                             try:
                                 # Handle formats like "1/10" or just "1"
-                                if isinstance(value, str) and "/" in value:
+                                if isinstance(value, TRCK):
+                                    tags[field] = int(value.text[0])
+                                elif isinstance(value, int):
+                                    tags[field] = value
+                                elif isinstance(value, str) and "/" in value:
                                     track_num = value.split("/")[0]
                                     tags[field] = int(track_num)
                                 else:
