@@ -70,7 +70,7 @@ class VectorDB:
             subsonic_id=subsonic_id,
             artist=track.artist,
             album=track.album,
-            title=track.title,
+            title=track.track,
         ).model_dump()
 
         self.collection.upsert(
