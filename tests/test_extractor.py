@@ -172,8 +172,13 @@ EXPECTED_EXTRACTION = {
         "date": "1995-04-05",
         "duration": 25.05142857142857,
         "genre": ["Power Metal"],
+        'musicbrainz_artistid': '7fa7fc04-1011-4876-8095-ecd232edea87',
+        'musicbrainz_releasegroupid': 'e0fb41f5-17b2-32e0-ad8c-de40f2a6ed4e',
+        'musicbrainz_releasetrackid': 'd37ab610-d96a-3fe8-aadc-8c593596a348',
         "path": "/home/dillavou/projects/boldaric/tests/test.mp3",
         "title": "Imaginations From the Other Side",
+        "tracknumber": 1,
+        "releasetype": "album"
     },
     "mfcc": {
         "covariance": [
@@ -443,7 +448,7 @@ def test_extract_features_structure(sample_audio_file):
         "groove",
         "mood",
         "genre",
-        "genre_embeddings",
+        "genre_embeddings"
     }
 
     assert isinstance(features, dict)

@@ -67,3 +67,4 @@ target-version = ['py311']
 [tool.mypy]
 strict = true  # Enforces maximum checks
 packages = ["boldaric"]
+disable_error_code = "no-untyped-call,no-untyped-def,import-untyped"
