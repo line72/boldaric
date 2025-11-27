@@ -89,6 +89,37 @@ class VectorDB:
             }
         return None
 
+    def get_all_tracks(self) -> list[dict]:
+        """Get all tracks from the database"""
+        results = self.collection.get(
+            include=["embeddings", "metadatas"]
+        )
+        
+        # Process results into a list of dictionaries
+        tracks = []
+        for i in range(len(results["ids"])):
+            tracks.append({
+                "id": results["ids"][i],
+                "metadata": results["metadatas"][i],
+                "embedding": results["embeddings"][i] if "embeddings" in results else None
+            })
+        
+        return tracks
+
+    def delete_track(self, subsonic_id: str) -> None:
+        """Delete a track by its subsonic_id"""
+        self.collection.delete(ids=[subsonic_id])
+
+    def delete_tracks(self, subsonic_ids: list[str]) -> None:
+        """Delete multiple tracks by their subsonic_ids"""
+        self.collection.delete(ids=subsonic_ids)
+
+    def delete_all_tracks(self) -> None:
+        """Delete all tracks from the database"""
+        all_ids = self.collection.get(include=[])["ids"]
+        if all_ids:
+            self.collection.delete(ids=all_ids)
+
     def query_similar(
         self,
         embedding: list[float],
