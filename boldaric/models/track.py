@@ -22,6 +22,7 @@ class Track(Base):
     musicbrainz_albumid = Column(String)
     musicbrainz_trackid = Column(String)
     releasetype = Column(String)
+    releasestatus = Column(String)
     genre_embedding = Column(LargeBinary)
     mfcc_covariance = Column(LargeBinary)
     mfcc_mean = Column(LargeBinary)

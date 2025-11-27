@@ -34,6 +34,7 @@ def upgrade() -> None:
         sa.Column("musicbrainz_albumid", sa.String),
         sa.Column("musicbrainz_trackid", sa.String),
         sa.Column("releasetype", sa.String),
+        sa.Column("releasestatus", sa.String),
         sa.Column("genre_embedding", sa.LargeBinary),
         sa.Column("mfcc_covariance", sa.LargeBinary),
         sa.Column("mfcc_mean", sa.LargeBinary),
