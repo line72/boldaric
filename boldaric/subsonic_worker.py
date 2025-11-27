@@ -290,6 +290,16 @@ def worker(db_name, song_queue, progress_queue):
                 print(f"worker got unknown message {q}")
 
 
+def cleanup_invalid_tracks(stationdb):
+    vectordb = boldaric.VectorDB.build_from_http()
+
+    ids_to_delete = []
+    for track in vectordb.get_all_tracks():
+        if not stationdb.get_track_by_subsonic_id(track['id']):
+            ids_to_delete.append(track['id'])
+
+    vectordb.delete_tracks(ids_to_delete)
+                
 def latinize_text(text):
     # Convert to latin
     return unidecode(text)
@@ -428,3 +438,5 @@ def main():
 
     progress_bar_process.join()
     generator_process.join()
+
+    cleanup_invalid_tracks(stationdb)
