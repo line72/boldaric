@@ -178,6 +178,7 @@ EXPECTED_EXTRACTION = {
         "path": "/home/dillavou/projects/boldaric/tests/test.mp3",
         "title": "Imaginations From the Other Side",
         "tracknumber": 1,
+        "releasestatus": "official",
         "releasetype": "album"
     },
     "mfcc": {
@@ -507,6 +508,7 @@ def test_metadata_extraction(sample_audio_file):
     audio_file = File(sample_audio_file)
     
     metadata = extract_metadata(sample_audio_file, audio_file, audio_44_1k)
+    assert metadata == EXPECTED_EXTRACTION['metadata']
 
     # Check that we have basic metadata fields
     required_metadata = {"path", "duration", "audio_length"}

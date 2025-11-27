@@ -122,10 +122,14 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
         "releasetype": [
             "MusicBrainz Album Type",
             "TXXX:RELEASETYPE",
-            "RELEASETYPE"
+            "RELEASETYPE",
             "TXXX:MUSICBRAINZ_ALBUMTYPE",
             "MUSICBRAINZ_ALBUMTYPE"
         ],
+        "releasestatus": [
+            "TXXX:RELEASESTATUS",
+            "RELEASESTATUS"
+        ]
     }
 
     if hasattr(audio_file, "tags"):
