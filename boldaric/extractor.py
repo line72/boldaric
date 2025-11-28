@@ -13,6 +13,7 @@ import os
 
 import numpy as np
 from mutagen import File
+from mutagen.id3 import TRCK
 
 from importlib.resources import files
 
@@ -111,11 +112,24 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
         "rating": ["POPM", "RATING", "RATING WMP", "RATING AMAZON"],
         "musicbrainz_releasetrackid": [
             "UFID:http://musicbrainz.org",
+            "TXXX:MUSICBRAINZ_RELEASETRACKID",
             "MUSICBRAINZ_RELEASETRACKID",
         ],
-        "musicbrainz_artistid": ["MUSICBRAINZ_ARTISTID"],
-        "musicbrainz_releasegroupid": ["MUSICBRAINZ_RELEASEGROUPID"],
-        "musicbrainz_workid": ["MUSICBRAINZ_WORKID"],
+        "musicbrainz_artistid": ["TXXX:MUSICBRAINZ_ARTISTID", "MUSICBRAINZ_ARTISTID"],
+        "musicbrainz_releasegroupid": ["TXXX:MUSICBRAINZ_RELEASEGROUPID", "MUSICBRAINZ_RELEASEGROUPID"],
+        "musicbrainz_workid": ["TXXX:MUSICBRAINZ_WORKID", "MUSICBRAINZ_WORKID"],
+        "tracknumber": ["TRCK", "trkn", "TRACKNUMBER", "TXXX:TRACKNUMBER"],
+        "releasetype": [
+            "MusicBrainz Album Type",
+            "TXXX:RELEASETYPE",
+            "RELEASETYPE",
+            "TXXX:MUSICBRAINZ_ALBUMTYPE",
+            "MUSICBRAINZ_ALBUMTYPE"
+        ],
+        "releasestatus": [
+            "TXXX:RELEASESTATUS",
+            "RELEASESTATUS"
+        ]
     }
 
     if hasattr(audio_file, "tags"):
@@ -143,6 +157,21 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
                                     tags[field] = min(rating_val / 255, 1.0)
                             except (ValueError, TypeError):
                                 tags[field] = 0.0
+                        elif field == "tracknumber":
+                            # Handle track number parsing
+                            try:
+                                # Handle formats like "1/10" or just "1"
+                                if isinstance(value, TRCK):
+                                    tags[field] = int(value.text[0])
+                                elif isinstance(value, int):
+                                    tags[field] = value
+                                elif isinstance(value, str) and "/" in value:
+                                    track_num = value.split("/")[0]
+                                    tags[field] = int(track_num)
+                                else:
+                                    tags[field] = int(value)
+                            except (ValueError, TypeError):
+                                tags[field] = 0
                         else:
                             # Handle MusicBrainz ReleaseTrackID UFID format
                             if field == "musicbrainz_releasetrackid" and hasattr(
@@ -166,6 +195,12 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
     # Try to get more precise duration from file metadata if available
     if hasattr(audio_file, "info") and hasattr(audio_file.info, "length"):
         tags["duration"] = audio_file.info.length
+
+    # Set default values for tracknumber and releasetype if not found
+    if "tracknumber" not in tags:
+        tags["tracknumber"] = 0
+    if "releasetype" not in tags:
+        tags["releasetype"] = ""
 
     return tags
 
