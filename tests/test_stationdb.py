@@ -21,7 +21,7 @@ def station_db():
 
 def create_track(station_db, artist, album, title, subsonic_id):
     station_db.add_track(artist, album, title, 1, '',
-                         subsonic_id, '', '', '', 'album',
+                         subsonic_id, '', '', '', 'album', 'official',
                          [], [0.1]*128, #genre
                          [0.2]*13, [0.21]*13, 0.0, #mfcc
                          0.5, 0.5, 0.5, #bpm-dynamic_complexity
