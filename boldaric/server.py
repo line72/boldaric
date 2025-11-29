@@ -229,7 +229,7 @@ async def make_station(request):
         except ValidationError as e:
             return web.json_response({"error": e.errors()}, status=400)
 
-        track = station_db.get_track_by_subsonnic_id(params.song_id)
+        track = station_db.get_track_by_subsonic_id(params.song_id)
         if not track:
             return web.json_response({"error": "Invalid `song_id`"}, status=400)
 
@@ -254,7 +254,7 @@ async def make_station(request):
                     "url": stream_url,
                     "song_id": track.subsonic_id,
                     "artist": track.artist,
-                    "title": track.title,
+                    "title": track.track,
                     "album": track.album,
                     "cover_url": cover_url,
                 },
@@ -320,7 +320,7 @@ async def get_next_song_for_station(request):
         if len(top_tracks) > 0:
 
             def make_response(t):
-                track = station_db.get_track_by_subsonnic_id(
+                track = station_db.get_track_by_subsonic_id(
                     t["metadata"]["subsonic_id"]
                 )
                 stream_url = boldaric.subsonic.make_stream_link(
@@ -334,7 +334,7 @@ async def get_next_song_for_station(request):
                     "url": stream_url,
                     "song_id": track.subsonic_id,
                     "artist": track.artist,
-                    "title": track.title,
+                    "title": track.track,
                     "album": track.album,
                     "cover_url": cover_url,
                 }
