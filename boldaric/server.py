@@ -591,6 +591,18 @@ async def go(db_path, port):
 
     app = web.Application(middlewares=[auth_middleware])
     app.add_routes(routes)
+    
+    # Add static file serving
+    static_path = Path(__file__).parent / 'static'
+    app.router.add_static('/static/', static_path, name='static')
+    
+    # Add route for the main page
+    async def index(request):
+        return web.FileResponse(static_path / 'index.html')
+    
+    app.router.add_get('/', index)
+    app.router.add_get('/stations', index)
+    app.router.add_get('/login', index)
 
     app["vec_db"] = vec_db
     app["station_db"] = station_db

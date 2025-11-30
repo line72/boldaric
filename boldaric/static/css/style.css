@@ -1,0 +1,122 @@
+/* Global Styles */
+:root {
+  --primary-color: #3498db;
+  --secondary-color: #2c3e50;
+  --success-color: #27ae60;
+  --error-color: #e74c3c;
+  --background-color: #f8f9fa;
+  --card-background: #ffffff;
+  --text-color: #333333;
+  --border-color: #e1e8ed;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.app-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Header */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+header h1 {
+  color: var(--secondary-color);
+}
+
+button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+#logout-btn {
+  background-color: var(--error-color);
+  color: white;
+}
+
+/* Forms */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.form-group input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+button[type="submit"] {
+  background-color: var(--success-color);
+  color: white;
+}
+
+/* Login */
+.login-container {
+  max-width: 400px;
+  margin: 50px auto;
+  background-color: var(--card-background);
+  border-radius: 8px;
+  padding: 30px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.login-container h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  color: var(--secondary-color);
+}
+
+/* Error Messages */
+.error-message {
+  color: var(--error-color);
+  text-align: center;
+  margin-top: 15px;
+  min-height: 20px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 10px;
+  }
+  
+  .login-container {
+    margin: 20px auto;
+    padding: 20px;
+  }
+}
