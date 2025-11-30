@@ -456,6 +456,13 @@ class StationDB:
 
             return track_record
 
+    def update_track(self, track: Track) -> Track:
+        with self.Session() as session:
+            session.merge(track)
+            session.commit()
+
+            return track
+        
     def get_track_by_subsonic_id(self, subsonic_id: str) -> Track | None:
         """Get a track based on subsonic id"""
         with self.Session() as session:

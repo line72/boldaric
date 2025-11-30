@@ -98,9 +98,32 @@ def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 
-def extract_metadata(file_path, audio_file, audio_44_1k):
+def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
     """Extract metadata from audio file."""
-    tags = {"path": os.path.abspath(file_path)}
+    if audio_file is None:
+        audio_file = File(file_path)
+    if audio_44_1k is None:
+        loader_44_1k = es.MonoLoader(filename=file_path, sampleRate=44100)
+        audio_44_1k = loader_44_1k()
+    
+    tags = {
+        "path": os.path.abspath(file_path),
+        "artist": "",
+        "album": "",
+        "title": "",
+        "date": "",
+        "genre": [],
+        "rating": 0.0,
+        "musicbrainz_releasetrackid": "",
+        "musicbrainz_artistid": "",
+        "musicbrainz_releasegroupid": "",
+        "musicbrainz_workid": "",
+        "tracknumber": 0,
+        "releasetype": "album",
+        "releasestatus": "official",
+        "duration": 0,
+        "audio_length": 0
+    }
 
     # Common tag fields across formats
     tag_mapping = {
@@ -214,12 +237,6 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
     # Try to get more precise duration from file metadata if available
     if hasattr(audio_file, "info") and hasattr(audio_file.info, "length"):
         tags["duration"] = audio_file.info.length
-
-    # Set default values for tracknumber and releasetype if not found
-    if "tracknumber" not in tags:
-        tags["tracknumber"] = 0
-    if "releasetype" not in tags:
-        tags["releasetype"] = ""
 
     return tags
 
