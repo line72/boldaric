@@ -220,7 +220,8 @@ class PlayerComponent extends HTMLElement {
       });
 
       if (response.ok) {
-        this.loadNextTrack();
+        // Don't load next track, just continue playing current one
+        console.log('Track thumbs up recorded');
       }
     } catch (error) {
       console.error('Thumbs up error:', error);
