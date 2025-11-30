@@ -41,8 +41,8 @@ class SearchModal extends HTMLElement {
         ${this.searchResults.map(song => `
           <div class="result-item" data-song-id="${song.id}">
             <div class="song-info">
-              <strong>${song.artist}</strong> - ${song.title}
-              <div class="album-info">${song.album}</div>
+              <strong>${song.artist}</strong>
+              <div class="album-info">${song.title} • ${song.album}</div>
             </div>
             <button class="select-btn" data-song-id="${song.id}">Select</button>
           </div>

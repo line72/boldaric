@@ -98,8 +98,8 @@ class StationCreate extends HTMLElement {
         ${this.searchResults.map(song => `
           <div class="search-result-item ${song.id === this.selectedSeedSong ? 'selected' : ''}" data-song-id="${song.id}">
             <div class="song-info">
-              <strong>${song.artist}</strong> - ${song.title}
-              <div class="album-info">${song.album}</div>
+              <strong>${song.artist}</strong>
+              <div class="album-info">${song.title} • ${song.album}</div>
             </div>
             <button class="select-btn" data-song-id="${song.id}">
               ${song.id === this.selectedSeedSong ? 'Selected' : 'Select'}
