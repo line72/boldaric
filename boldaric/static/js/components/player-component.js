@@ -38,6 +38,9 @@ class PlayerComponent extends HTMLElement {
   disconnectedCallback() {
     // Clean up event listeners when component is removed
     this.cleanupEventListeners();
+    
+    // Reset media session when leaving player
+    this.resetMediaSession();
   }
 
   render() {
@@ -213,6 +216,16 @@ class PlayerComponent extends HTMLElement {
       });
 
       // Disable next/previous track controls
+      navigator.mediaSession.setActionHandler('previoustrack', null);
+      navigator.mediaSession.setActionHandler('nexttrack', null);
+    }
+  }
+
+  resetMediaSession() {
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.metadata = null;
+      navigator.mediaSession.setActionHandler('play', null);
+      navigator.mediaSession.setActionHandler('pause', null);
       navigator.mediaSession.setActionHandler('previoustrack', null);
       navigator.mediaSession.setActionHandler('nexttrack', null);
     }
