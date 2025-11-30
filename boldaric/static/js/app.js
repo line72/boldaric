@@ -4,6 +4,8 @@ class BoldaricApp extends HTMLElement {
     this.token = sessionStorage.getItem('authToken');
     this.currentView = this.token ? 'stations' : 'login';
     this.stationId = null;
+    this.currentStation = null;
+    this.currentTrack = null;
   }
 
   connectedCallback() {
@@ -33,6 +35,8 @@ class BoldaricApp extends HTMLElement {
         return '<station-list></station-list>';
       case 'create-station':
         return '<station-create></station-create>';
+      case 'player':
+        return `<player-component station-id="${this.stationId}"></player-component>`;
       default:
         return '<login-component></login-component>';
     }
@@ -40,7 +44,9 @@ class BoldaricApp extends HTMLElement {
 
   navigateTo(view, data = {}) {
     this.currentView = view;
+    if (data.station) this.currentStation = data.station;
     if (data.stationId) this.stationId = data.stationId;
+    if (data.track) this.currentTrack = data.track;
     this.render();
   }
 
@@ -48,6 +54,9 @@ class BoldaricApp extends HTMLElement {
     sessionStorage.removeItem('authToken');
     this.token = null;
     this.currentView = 'login';
+    this.stationId = null;
+    this.currentStation = null;
+    this.currentTrack = null;
     this.render();
   }
 

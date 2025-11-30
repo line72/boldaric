@@ -93,7 +93,7 @@ class StationList extends HTMLElement {
         const data = await response.json();
         const firstTrack = data.tracks[0];
         document.querySelector('boldaric-app').navigateTo('player', {
-          station: { id: stationId },
+          stationId: stationId,
           track: firstTrack
         });
       }

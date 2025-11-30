@@ -219,7 +219,7 @@ class StationCreate extends HTMLElement {
         const data = await response.json();
         // Navigate to player with the initial track
         document.querySelector('boldaric-app').navigateTo('player', {
-          station: data.station,
+          stationId: data.station.id,
           track: data.track
         });
       } else {
