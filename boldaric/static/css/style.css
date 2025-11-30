@@ -230,6 +230,24 @@ button[type="button"] {
   cursor: pointer;
 }
 
+.select-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.selected-seed {
+  background-color: #e8f5e9;
+  border: 1px solid #c8e6c9;
+  border-radius: 4px;
+  padding: 15px;
+  margin: 20px 0;
+}
+
+.selected-seed h4 {
+  margin-bottom: 10px;
+  color: #2e7d32;
+}
+
 /* Utility Classes */
 .loading {
   text-align: center;
