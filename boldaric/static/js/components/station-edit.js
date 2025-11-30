@@ -46,7 +46,10 @@ class StationEdit extends HTMLElement {
 
     this.innerHTML = `
       <div class="station-edit-container">
-        <h2>Edit Station: ${this.station.name}</h2>
+        <div class="station-edit-header">
+          <button id="back-btn" class="back-btn">←</button>
+          <h2>Edit Station: ${this.station.name}</h2>
+        </div>
         <form id="edit-station-form">
           <div class="form-group">
             <label>
@@ -66,7 +69,6 @@ class StationEdit extends HTMLElement {
           </div>
           
           <div class="form-actions">
-            <button type="button" id="back-btn">Back to Stations</button>
             <button type="submit">Save Changes</button>
           </div>
         </form>
