@@ -15,8 +15,6 @@ class StationCreate extends HTMLElement {
   connectedCallback() {
     this.render();
     this.setupEventListeners();
-    // Restore form values if they exist
-    this.restoreFormValues();
     
     // Focus the station name input by default
     setTimeout(() => {
@@ -118,7 +116,6 @@ class StationCreate extends HTMLElement {
       const form = this.querySelector('#create-station-form');
       if (form) {
         form.addEventListener('submit', (event) => {
-          console.log('Form submit event triggered');
           this.createStation(event);
         });
       }
@@ -156,6 +153,30 @@ class StationCreate extends HTMLElement {
     }, 0);
   }
 
+  saveFormValues() {
+    // Save current form values before re-rendering
+    const stationNameInput = this.querySelector('#station-name');
+    const ignoreLiveInput = this.querySelector('#ignore-live');
+    const replayCooldownInput = this.querySelector('#replay-cooldown');
+    const artistDownrankInput = this.querySelector('#artist-downrank');
+    
+    if (stationNameInput) {
+      this.formValues.stationName = stationNameInput.value;
+    }
+    
+    if (ignoreLiveInput) {
+      this.formValues.ignoreLive = ignoreLiveInput.checked;
+    }
+    
+    if (replayCooldownInput) {
+      this.formValues.replayCooldown = replayCooldownInput.value;
+    }
+    
+    if (artistDownrankInput) {
+      this.formValues.artistDownrank = artistDownrankInput.value;
+    }
+  }
+
   async searchSongs() {
     const query = this.querySelector('#seed-song-search').value.trim();
     if (!query) return;
@@ -176,7 +197,12 @@ class StationCreate extends HTMLElement {
         const data = await response.json();
         // The search API returns a direct array of songs
         this.searchResults = Array.isArray(data) ? data : [];
-        this.querySelector('#search-results').innerHTML = this.renderSearchResults();
+        
+        // Update only the search results section instead of re-rendering everything
+        const searchResultsContainer = this.querySelector('#search-results');
+        if (searchResultsContainer) {
+          searchResultsContainer.innerHTML = this.renderSearchResults();
+        }
       } else {
         console.error('Search failed with status:', response.status);
       }
@@ -187,13 +213,42 @@ class StationCreate extends HTMLElement {
 
   selectSeedSong(songId) {
     this.selectedSeedSong = songId;
-    this.render();
-    // Re-attach event listeners after re-rendering
-    this.setupEventListeners();
+    
+    // Save form values before updating the UI
+    this.saveFormValues();
+    
+    // Update only the selected seed section instead of re-rendering everything
+    const form = this.querySelector('#create-station-form');
+    if (form) {
+      const selectedSeedSection = form.querySelector('.selected-seed');
+      if (selectedSeedSection) {
+        selectedSeedSection.remove();
+      }
+      
+      if (this.selectedSeedSong) {
+        const newSelectedSeedSection = document.createElement('div');
+        newSelectedSeedSection.className = 'selected-seed';
+        newSelectedSeedSection.innerHTML = `
+          <h4>Selected Seed Song:</h4>
+          <p>${this.getSelectedSongInfo()}</p>
+        `;
+        
+        // Insert after the search results
+        const searchResults = form.querySelector('#search-results');
+        if (searchResults) {
+          searchResults.after(newSelectedSeedSection);
+        }
+      }
+      
+      // Update the search results to show the selected state
+      const searchResultsContainer = form.querySelector('#search-results');
+      if (searchResultsContainer) {
+        searchResultsContainer.innerHTML = this.renderSearchResults();
+      }
+    }
   }
 
   async createStation(event) {
-    console.log('createStation called');
     event.preventDefault();
     event.stopPropagation();
     
@@ -203,18 +258,14 @@ class StationCreate extends HTMLElement {
       return;
     }
 
-    // Validate that station name is provided
-    const stationName = this.querySelector('#station-name').value.trim();
-    if (!stationName) {
-      alert('Please enter a station name');
-      return;
-    }
+    // Save form values one more time before submitting
+    this.saveFormValues();
 
-    // Get current form values directly from the form elements to ensure we have the latest values
-    // This ensures we get the value even if the user hasn't tabbed out of the field
-    const ignoreLive = this.querySelector('#ignore-live')?.checked || false;
-    const replayCooldown = parseInt(this.querySelector('#replay-cooldown')?.value);
-    const artistDownrank = parseFloat(this.querySelector('#artist-downrank')?.value);
+    // Get current form values
+    const stationName = this.formValues.stationName || this.querySelector('#station-name').value.trim();
+    const ignoreLive = this.formValues.ignoreLive || this.querySelector('#ignore-live').checked;
+    const replayCooldown = parseInt(this.formValues.replayCooldown) || parseInt(this.querySelector('#replay-cooldown').value) || 50;
+    const artistDownrank = parseFloat(this.formValues.artistDownrank) || parseFloat(this.querySelector('#artist-downrank').value) || 0.995;
 
     console.log('Form values:', { stationName, ignoreLive, replayCooldown, artistDownrank });
 
