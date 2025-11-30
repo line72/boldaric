@@ -9,6 +9,8 @@ class PlayerComponent extends HTMLElement {
     this.currentTrack = null;
     this.isPlaying = false;
     this.progressInterval = null;
+    this.eightyPercentSubmitted = false;
+    this.nextTrack = null;
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -69,34 +71,81 @@ class PlayerComponent extends HTMLElement {
         <audio id="audio-player"></audio>
       </div>
     `;
+    
+    // Re-attach event listeners after rendering
+    this.setupEventListeners();
   }
 
   setupEventListeners() {
-    this.addEventListener('click', (event) => {
-      if (event.target.id === 'back-btn') {
-        this.stopPlayback();
-        document.querySelector('boldaric-app').navigateTo('stations');
-      } else if (event.target.id === 'play-pause') {
-        this.togglePlayPause();
-      } else if (event.target.id === 'thumbs-up') {
-        this.thumbsUp();
-      } else if (event.target.id === 'thumbs-down') {
-        this.thumbsDown();
-      }
-    });
+    // Remove any existing event listeners to prevent duplicates
+    this.removeEventListener('click', this.handleGlobalClick);
+    this.addEventListener('click', this.handleGlobalClick.bind(this));
 
     const audio = this.querySelector('#audio-player');
     if (audio) {
+      // Remove existing listeners to prevent duplicates
+      audio.removeEventListener('timeupdate', this.updateProgress);
+      audio.removeEventListener('ended', this.trackEnded);
+      audio.removeEventListener('loadedmetadata', this.onMetadataLoaded);
+      audio.removeEventListener('canplay', this.onCanPlay);
+      
+      // Add event listeners
       audio.addEventListener('timeupdate', this.updateProgress.bind(this));
       audio.addEventListener('ended', this.trackEnded.bind(this));
-      audio.addEventListener('canplay', () => {
-        this.querySelector('#total-time').textContent = this.formatTime(audio.duration);
+      audio.addEventListener('loadedmetadata', this.onMetadataLoaded.bind(this));
+      audio.addEventListener('canplay', this.onCanPlay.bind(this));
+      audio.addEventListener('play', () => {
+        this.isPlaying = true;
+        const playPauseBtn = this.querySelector('#play-pause');
+        if (playPauseBtn) {
+          playPauseBtn.textContent = '⏸';
+        }
+      });
+      audio.addEventListener('pause', () => {
+        this.isPlaying = false;
+        const playPauseBtn = this.querySelector('#play-pause');
+        if (playPauseBtn) {
+          playPauseBtn.textContent = '▶';
+        }
       });
     }
     
     const progressBar = this.querySelector('#progress-bar');
     if (progressBar) {
+      // Remove existing listeners to prevent duplicates
+      progressBar.removeEventListener('input', this.seek);
       progressBar.addEventListener('input', this.seek.bind(this));
+    }
+  }
+
+  handleGlobalClick(event) {
+    if (event.target.id === 'back-btn') {
+      this.stopPlayback();
+      document.querySelector('boldaric-app').navigateTo('stations');
+    } else if (event.target.id === 'play-pause') {
+      this.togglePlayPause();
+    } else if (event.target.id === 'thumbs-up') {
+      this.thumbsUp();
+    } else if (event.target.id === 'thumbs-down') {
+      this.thumbsDown();
+    }
+  }
+
+  onMetadataLoaded() {
+    const audio = this.querySelector('#audio-player');
+    const totalTimeSpan = this.querySelector('#total-time');
+    
+    if (audio && totalTimeSpan) {
+      totalTimeSpan.textContent = this.formatTime(audio.duration);
+    }
+  }
+
+  onCanPlay() {
+    const audio = this.querySelector('#audio-player');
+    const totalTimeSpan = this.querySelector('#total-time');
+    
+    if (audio && totalTimeSpan) {
+      totalTimeSpan.textContent = this.formatTime(audio.duration);
     }
   }
 
@@ -119,6 +168,7 @@ class PlayerComponent extends HTMLElement {
 
   loadTrack(track) {
     this.currentTrack = track;
+    this.eightyPercentSubmitted = false;
     this.render();
     
     const audio = this.querySelector('#audio-player');
@@ -165,11 +215,10 @@ class PlayerComponent extends HTMLElement {
       currentTimeSpan.textContent = this.formatTime(currentTime);
       totalTimeSpan.textContent = this.formatTime(duration);
       
-      // Check if 80% completed
-      if ((currentTime / duration) >= 0.8) {
+      // Check if 80% completed and we haven't submitted yet
+      if ((currentTime / duration) >= 0.8 && !this.eightyPercentSubmitted) {
         this.markTrackAsListened();
-        // Only mark once, so we remove the duration to prevent re-triggering
-        audio.duration = 0;
+        this.eightyPercentSubmitted = true;
       }
     }
   }
@@ -203,6 +252,9 @@ class PlayerComponent extends HTMLElement {
           'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
         }
       });
+      
+      // Load next track in background
+      this.loadNextTrack();
     } catch (error) {
       console.error('Error marking track as listened:', error);
     }
@@ -260,7 +312,40 @@ class PlayerComponent extends HTMLElement {
       if (response.ok) {
         const data = await response.json();
         if (data.tracks && data.tracks.length > 0) {
-          this.loadTrack(data.tracks[0]);
+          // Store the next track for when the current one ends
+          this.nextTrack = data.tracks[0];
+        }
+      }
+    } catch (error) {
+      console.error('Error loading next track:', error);
+    }
+  }
+
+  trackEnded() {
+    // If we haven't submitted the track yet (maybe user scrubbed to end), submit it now
+    if (!this.eightyPercentSubmitted && this.currentTrack && this.stationId) {
+      this.markTrackAsListened();
+    }
+    
+    // Play the next track if we have one
+    if (this.nextTrack) {
+      this.loadTrack(this.nextTrack);
+      // Auto-play the next track
+      setTimeout(() => {
+        const playPauseBtn = this.querySelector('#play-pause');
+        const audio = this.querySelector('#audio-player');
+        if (playPauseBtn && audio) {
+          audio.play().then(() => {
+            playPauseBtn.textContent = '⏸';
+            this.isPlaying = true;
+          }).catch(console.error);
+        }
+      }, 100);
+    } else {
+      // If we don't have a next track, try to load one now
+      this.loadNextTrack().then(() => {
+        if (this.nextTrack) {
+          this.loadTrack(this.nextTrack);
           // Auto-play the next track
           setTimeout(() => {
             const playPauseBtn = this.querySelector('#play-pause');
@@ -273,14 +358,8 @@ class PlayerComponent extends HTMLElement {
             }
           }, 100);
         }
-      }
-    } catch (error) {
-      console.error('Error loading next track:', error);
+      });
     }
-  }
-
-  trackEnded() {
-    this.loadNextTrack();
   }
 
   stopPlayback() {
