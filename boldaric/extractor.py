@@ -217,7 +217,7 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
                         elif field == "musicbrainz_releasetrackid" and hasattr(value, "data"):
                             # Handle MusicBrainz ReleaseTrackID UFID format
                             # Extract binary data and decode, removing null bytes
-                            tags[field] = convet_to_string(value.data)
+                            tags[field] = convert_to_string(value.data)
                         else:
                             # Properly handle binary data by checking type first
                             if isinstance(value, list):
