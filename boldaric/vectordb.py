@@ -112,7 +112,8 @@ class VectorDB:
 
     def delete_tracks(self, subsonic_ids: list[str]) -> None:
         """Delete multiple tracks by their subsonic_ids"""
-        self.collection.delete(ids=subsonic_ids)
+        if len(subsonic_ids) > 0:
+            self.collection.delete(ids=subsonic_ids)
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks from the database"""
