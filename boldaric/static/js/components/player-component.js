@@ -23,7 +23,6 @@ class PlayerComponent extends HTMLElement {
   connectedCallback() {
     this.render();
     this.setupEventListeners();
-    this.setupMediaSession();
     
     // Check if we have a current track from the app navigation
     const app = document.querySelector('boldaric-app');
@@ -78,39 +77,65 @@ class PlayerComponent extends HTMLElement {
 
   setupEventListeners() {
     // Remove any existing event listeners to prevent duplicates
-    this.removeEventListener('click', this.handleGlobalClick);
+    this.removeEventListener('click', this.handleGlobalClickBound);
+    
+    // Bind methods once and store the bound references for proper removal
+    if (!this.handleGlobalClickBound) {
+      this.handleGlobalClickBound = this.handleGlobalClick.bind(this);
+    }
+    if (!this.updateProgressBound) {
+      this.updateProgressBound = this.updateProgress.bind(this);
+    }
+    if (!this.trackEndedBound) {
+      this.trackEndedBound = this.trackEnded.bind(this);
+    }
+    if (!this.onMetadataLoadedBound) {
+      this.onMetadataLoadedBound = this.onMetadataLoaded.bind(this);
+    }
+    if (!this.onCanPlayBound) {
+      this.onCanPlayBound = this.onCanPlay.bind(this);
+    }
+    if (!this.onPlayBound) {
+      this.onPlayBound = this.onPlay.bind(this);
+    }
+    if (!this.onPauseBound) {
+      this.onPauseBound = this.onPause.bind(this);
+    }
+    if (!this.seekBound) {
+      this.seekBound = this.seek.bind(this);
+    }
     
     // Add event listeners
-    this.addEventListener('click', this.handleGlobalClick.bind(this));
+    this.addEventListener('click', this.handleGlobalClickBound);
 
     const audio = this.querySelector('#audio-player');
     if (audio) {
       // Remove existing listeners to prevent duplicates
-      audio.removeEventListener('timeupdate', this.updateProgress);
-      audio.removeEventListener('ended', this.trackEnded);
-      audio.removeEventListener('loadedmetadata', this.onMetadataLoaded);
-      audio.removeEventListener('canplay', this.onCanPlay);
-      audio.removeEventListener('play', this.onPlay);
-      audio.removeEventListener('pause', this.onPause);
+      audio.removeEventListener('timeupdate', this.updateProgressBound);
+      audio.removeEventListener('ended', this.trackEndedBound);
+      audio.removeEventListener('loadedmetadata', this.onMetadataLoadedBound);
+      audio.removeEventListener('canplay', this.onCanPlayBound);
+      audio.removeEventListener('play', this.onPlayBound);
+      audio.removeEventListener('pause', this.onPauseBound);
       
       // Add event listeners
-      audio.addEventListener('timeupdate', this.updateProgress.bind(this));
-      audio.addEventListener('ended', this.trackEnded.bind(this));
-      audio.addEventListener('loadedmetadata', this.onMetadataLoaded.bind(this));
-      audio.addEventListener('canplay', this.onCanPlay.bind(this));
-      audio.addEventListener('play', this.onPlay.bind(this));
-      audio.addEventListener('pause', this.onPause.bind(this));
+      audio.addEventListener('timeupdate', this.updateProgressBound);
+      audio.addEventListener('ended', this.trackEndedBound);
+      audio.addEventListener('loadedmetadata', this.onMetadataLoadedBound);
+      audio.addEventListener('canplay', this.onCanPlayBound);
+      audio.addEventListener('play', this.onPlayBound);
+      audio.addEventListener('pause', this.onPauseBound);
     }
     
     const progressBar = this.querySelector('#progress-bar');
     if (progressBar) {
       // Remove existing listeners to prevent duplicates
-      progressBar.removeEventListener('input', this.seek);
-      progressBar.addEventListener('input', this.seek.bind(this));
+      progressBar.removeEventListener('input', this.seekBound);
+      progressBar.addEventListener('input', this.seekBound);
     }
   }
 
-  handleGlobalClick = (event) => {
+  handleGlobalClick(event) {
     if (event.target.id === 'back-btn') {
       this.stopPlayback();
       document.querySelector('boldaric-app').navigateTo('stations');
@@ -123,7 +148,7 @@ class PlayerComponent extends HTMLElement {
     }
   }
 
-  onPlay = () => {
+  onPlay() {
     this.isPlaying = true;
     const playPauseBtn = this.querySelector('#play-pause');
     if (playPauseBtn) {
@@ -131,7 +156,7 @@ class PlayerComponent extends HTMLElement {
     }
   }
 
-  onPause = () => {
+  onPause() {
     this.isPlaying = false;
     const playPauseBtn = this.querySelector('#play-pause');
     if (playPauseBtn) {
@@ -139,7 +164,7 @@ class PlayerComponent extends HTMLElement {
     }
   }
 
-  onMetadataLoaded = () => {
+  onMetadataLoaded() {
     const audio = this.querySelector('#audio-player');
     const totalTimeSpan = this.querySelector('#total-time');
     
@@ -148,7 +173,7 @@ class PlayerComponent extends HTMLElement {
     }
   }
 
-  onCanPlay = () => {
+  onCanPlay() {
     const audio = this.querySelector('#audio-player');
     const totalTimeSpan = this.querySelector('#total-time');
     
@@ -206,7 +231,7 @@ class PlayerComponent extends HTMLElement {
     this.isPlaying = !this.isPlaying;
   }
 
-  updateProgress = () => {
+  updateProgress() {
     const audio = this.querySelector('#audio-player');
     const progressBar = this.querySelector('#progress-bar');
     const currentTimeSpan = this.querySelector('#current-time');
@@ -238,7 +263,7 @@ class PlayerComponent extends HTMLElement {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
-  seek = () => {
+  seek() {
     const audio = this.querySelector('#audio-player');
     const progressBar = this.querySelector('#progress-bar');
     
@@ -357,7 +382,7 @@ class PlayerComponent extends HTMLElement {
     }
   }
 
-  trackEnded = () => {
+  trackEnded() {
     // If we haven't submitted the track yet, submit it now
     if (!this.trackSubmitted && this.currentTrack && this.stationId) {
       this.markTrackAsListened();
