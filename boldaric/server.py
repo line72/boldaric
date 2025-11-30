@@ -81,7 +81,7 @@ def get_next_songs(
     # query similar
     ignore_list = []
     # ignore ALL thumbs downed
-    ignore_list.extend([(x.artist, x.title) for x in thumbs_downed])
+    ignore_list.extend([(x.track.artist, x.track.track) for x in thumbs_downed])
     # ignore last X played
     replay_song_cooldown = station_options.replay_song_cooldown
     ignore_list.extend([(x.track.artist, x.track.track) for x in played[-replay_song_cooldown:]])
