@@ -154,7 +154,7 @@ def process_song(song, conn, stationdb, vectordb):
                 if track:
                     # re-extract JUST the metadata. We assume
                     #  the content hasn't changed
-                    metadata = boldaric.extractor.extract_metadata(temp_file)
+                    metadata = boldaric.extractor.extract_metadata(temp_file.name)
                     track.artist = metadata['artist']
                     track.album = metadata['album']
                     track.track = metadata['title']
