@@ -163,6 +163,13 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
         ]
     }
 
+    def convert_to_string(value):
+        if isinstance(value, (bytes, bytearray)):
+            # Handle binary data directly
+            return value.decode("utf-8", errors="replace").strip("\x00")
+
+        return str(value)
+    
     if hasattr(audio_file, "tags"):
         for field, keys in tag_mapping.items():
             for key in keys:
@@ -172,10 +179,10 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
                         # Handle special field types
                         if field == "genre":
                             if isinstance(value, list):
-                                tags[field] = value[:]
+                                tags[field] = [convert_to_string(x) for x in value]
                             else:
                                 tags[field] = [
-                                    g.strip() for g in str(value).split(";") if g.strip()
+                                    g.strip() for g in convert_to_string(value).split(";") if g.strip()
                                 ]
                         elif field == "rating":
                             # Normalize rating values from different formats
@@ -210,29 +217,13 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
                         elif field == "musicbrainz_releasetrackid" and hasattr(value, "data"):
                             # Handle MusicBrainz ReleaseTrackID UFID format
                             # Extract binary data and decode, removing null bytes
-                            tags[field] = value.data.decode(
-                                "utf-8", errors="replace"
-                            ).strip("\x00")
+                            tags[field] = convet_to_string(value.data)
                         else:
                             # Properly handle binary data by checking type first
                             if isinstance(value, list):
-                                tags[field] = '/'.join(value)
-                            elif isinstance(value, (bytes, bytearray)):
-                                # Handle binary data directly
-                                tags[field] = value.decode("utf-8", errors="replace")
-                            elif isinstance(value, str):
-                                # Already a string, use as-is
-                                tags[field] = value
+                                tags[field] = '/'.join([convert_to_string(x) for x in value])
                             else:
-                                # For other data types, try to convert to string
-                                try:
-                                    tags[field] = str(value)
-                                except UnicodeDecodeError:
-                                    # Handle any remaining binary-like objects
-                                    if hasattr(value, 'decode'):
-                                        tags[field] = value.decode("utf-8", errors="replace")
-                                    else:
-                                        tags[field] = str(value)
+                                tags[field] = convert_to_string(value)
                         break
                 except ValueError:
                     # Skip invalid tag keys for this file format
