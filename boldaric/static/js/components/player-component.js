@@ -8,10 +8,10 @@ class PlayerComponent extends HTMLElement {
     this.stationId = null;
     this.currentTrack = null;
     this.isPlaying = false;
-    this.progressInterval = null;
     this.eightyPercentSubmitted = false;
     this.nextTrack = null;
     this.trackSubmitted = false;
+    this.isLoadingNextTrack = false;
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -79,6 +79,8 @@ class PlayerComponent extends HTMLElement {
   setupEventListeners() {
     // Remove any existing event listeners to prevent duplicates
     this.removeEventListener('click', this.handleGlobalClick);
+    
+    // Add event listeners
     this.addEventListener('click', this.handleGlobalClick.bind(this));
 
     const audio = this.querySelector('#audio-player');
@@ -88,26 +90,16 @@ class PlayerComponent extends HTMLElement {
       audio.removeEventListener('ended', this.trackEnded);
       audio.removeEventListener('loadedmetadata', this.onMetadataLoaded);
       audio.removeEventListener('canplay', this.onCanPlay);
+      audio.removeEventListener('play', this.onPlay);
+      audio.removeEventListener('pause', this.onPause);
       
       // Add event listeners
       audio.addEventListener('timeupdate', this.updateProgress.bind(this));
       audio.addEventListener('ended', this.trackEnded.bind(this));
       audio.addEventListener('loadedmetadata', this.onMetadataLoaded.bind(this));
       audio.addEventListener('canplay', this.onCanPlay.bind(this));
-      audio.addEventListener('play', () => {
-        this.isPlaying = true;
-        const playPauseBtn = this.querySelector('#play-pause');
-        if (playPauseBtn) {
-          playPauseBtn.textContent = '⏸';
-        }
-      });
-      audio.addEventListener('pause', () => {
-        this.isPlaying = false;
-        const playPauseBtn = this.querySelector('#play-pause');
-        if (playPauseBtn) {
-          playPauseBtn.textContent = '▶';
-        }
-      });
+      audio.addEventListener('play', this.onPlay.bind(this));
+      audio.addEventListener('pause', this.onPause.bind(this));
     }
     
     const progressBar = this.querySelector('#progress-bar');
@@ -118,7 +110,7 @@ class PlayerComponent extends HTMLElement {
     }
   }
 
-  handleGlobalClick(event) {
+  handleGlobalClick = (event) => {
     if (event.target.id === 'back-btn') {
       this.stopPlayback();
       document.querySelector('boldaric-app').navigateTo('stations');
@@ -131,7 +123,23 @@ class PlayerComponent extends HTMLElement {
     }
   }
 
-  onMetadataLoaded() {
+  onPlay = () => {
+    this.isPlaying = true;
+    const playPauseBtn = this.querySelector('#play-pause');
+    if (playPauseBtn) {
+      playPauseBtn.textContent = '⏸';
+    }
+  }
+
+  onPause = () => {
+    this.isPlaying = false;
+    const playPauseBtn = this.querySelector('#play-pause');
+    if (playPauseBtn) {
+      playPauseBtn.textContent = '▶';
+    }
+  }
+
+  onMetadataLoaded = () => {
     const audio = this.querySelector('#audio-player');
     const totalTimeSpan = this.querySelector('#total-time');
     
@@ -140,7 +148,7 @@ class PlayerComponent extends HTMLElement {
     }
   }
 
-  onCanPlay() {
+  onCanPlay = () => {
     const audio = this.querySelector('#audio-player');
     const totalTimeSpan = this.querySelector('#total-time');
     
@@ -198,7 +206,7 @@ class PlayerComponent extends HTMLElement {
     this.isPlaying = !this.isPlaying;
   }
 
-  updateProgress() {
+  updateProgress = () => {
     const audio = this.querySelector('#audio-player');
     const progressBar = this.querySelector('#progress-bar');
     const currentTimeSpan = this.querySelector('#current-time');
@@ -230,7 +238,7 @@ class PlayerComponent extends HTMLElement {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   }
 
-  seek() {
+  seek = () => {
     const audio = this.querySelector('#audio-player');
     const progressBar = this.querySelector('#progress-bar');
     
@@ -247,6 +255,8 @@ class PlayerComponent extends HTMLElement {
     if (!this.currentTrack || !this.stationId || this.trackSubmitted) return;
     
     try {
+      this.trackSubmitted = true;
+      
       await fetch(`/api/station/${this.stationId}/${this.currentTrack.song_id}`, {
         method: 'PUT',
         headers: {
@@ -254,12 +264,11 @@ class PlayerComponent extends HTMLElement {
         }
       });
       
-      this.trackSubmitted = true;
-      
       // Load next track in background
       this.loadNextTrack();
     } catch (error) {
       console.error('Error marking track as listened:', error);
+      this.trackSubmitted = false;
     }
   }
 
@@ -285,6 +294,7 @@ class PlayerComponent extends HTMLElement {
   }
 
   async thumbsDown() {
+    console.log('thumbsDown');
     if (!this.currentTrack || !this.stationId) return;
     
     try {
@@ -306,7 +316,9 @@ class PlayerComponent extends HTMLElement {
   }
 
   async loadNextTrack(immediate = false) {
-    if (!this.stationId) return;
+    if (!this.stationId || this.isLoadingNextTrack) return;
+    
+    this.isLoadingNextTrack = true;
     
     try {
       const response = await fetch(`/api/station/${this.stationId}`, {
@@ -340,10 +352,12 @@ class PlayerComponent extends HTMLElement {
       }
     } catch (error) {
       console.error('Error loading next track:', error);
+    } finally {
+      this.isLoadingNextTrack = false;
     }
   }
 
-  trackEnded() {
+  trackEnded = () => {
     // If we haven't submitted the track yet, submit it now
     if (!this.trackSubmitted && this.currentTrack && this.stationId) {
       this.markTrackAsListened();
