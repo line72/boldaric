@@ -3,6 +3,7 @@ class BoldaricApp extends HTMLElement {
     super();
     this.token = sessionStorage.getItem('authToken');
     this.currentView = this.token ? 'stations' : 'login';
+    this.stationId = null;
   }
 
   connectedCallback() {
@@ -29,21 +30,25 @@ class BoldaricApp extends HTMLElement {
       case 'login':
         return '<login-component></login-component>';
       case 'stations':
-        return '<div>Station dashboard will go here</div>';
+        return '<station-list></station-list>';
+      case 'create-station':
+        return '<station-create></station-create>';
       default:
         return '<login-component></login-component>';
     }
   }
 
-  navigateTo(view) {
+  navigateTo(view, data = {}) {
     this.currentView = view;
+    if (data.stationId) this.stationId = data.stationId;
     this.render();
   }
 
   logout() {
     sessionStorage.removeItem('authToken');
     this.token = null;
-    this.navigateTo('login');
+    this.currentView = 'login';
+    this.render();
   }
 
   setupEventListeners() {
