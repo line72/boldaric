@@ -11,6 +11,7 @@ class PlayerComponent extends HTMLElement {
     this.progressInterval = null;
     this.eightyPercentSubmitted = false;
     this.nextTrack = null;
+    this.trackSubmitted = false;
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
@@ -168,6 +169,7 @@ class PlayerComponent extends HTMLElement {
   loadTrack(track) {
     this.currentTrack = track;
     this.eightyPercentSubmitted = false;
+    this.trackSubmitted = false;
     this.render();
     
     const audio = this.querySelector('#audio-player');
@@ -215,7 +217,7 @@ class PlayerComponent extends HTMLElement {
       totalTimeSpan.textContent = this.formatTime(duration);
       
       // Check if 80% completed and we haven't submitted yet
-      if ((currentTime / duration) >= 0.8 && !this.eightyPercentSubmitted) {
+      if ((currentTime / duration) >= 0.8 && !this.eightyPercentSubmitted && !this.trackSubmitted) {
         this.markTrackAsListened();
         this.eightyPercentSubmitted = true;
       }
@@ -242,7 +244,7 @@ class PlayerComponent extends HTMLElement {
   }
 
   async markTrackAsListened() {
-    if (!this.currentTrack || !this.stationId) return;
+    if (!this.currentTrack || !this.stationId || this.trackSubmitted) return;
     
     try {
       await fetch(`/api/station/${this.stationId}/${this.currentTrack.song_id}`, {
@@ -251,6 +253,8 @@ class PlayerComponent extends HTMLElement {
           'Authorization': `Bearer ${sessionStorage.getItem('authToken')}`
         }
       });
+      
+      this.trackSubmitted = true;
       
       // Load next track in background
       this.loadNextTrack();
@@ -271,7 +275,8 @@ class PlayerComponent extends HTMLElement {
       });
 
       if (response.ok) {
-        // Don't load next track, just continue playing current one
+        // Mark track as submitted but continue playing current song
+        this.trackSubmitted = true;
         console.log('Track thumbs up recorded');
       }
     } catch (error) {
@@ -291,30 +296,16 @@ class PlayerComponent extends HTMLElement {
       });
 
       if (response.ok) {
-        // Load the next track immediately when thumbs down is clicked
-        this.loadNextTrack().then(() => {
-          if (this.nextTrack) {
-            this.loadTrack(this.nextTrack);
-            // Auto-play the next track
-            setTimeout(() => {
-              const playPauseBtn = this.querySelector('#play-pause');
-              const audio = this.querySelector('#audio-player');
-              if (playPauseBtn && audio) {
-                audio.play().then(() => {
-                  playPauseBtn.textContent = '⏸';
-                  this.isPlaying = true;
-                }).catch(console.error);
-              }
-            }, 100);
-          }
-        });
+        // Mark track as submitted and load next track immediately
+        this.trackSubmitted = true;
+        this.loadNextTrack(true); // Force immediate play
       }
     } catch (error) {
       console.error('Thumbs down error:', error);
     }
   }
 
-  async loadNextTrack() {
+  async loadNextTrack(immediate = false) {
     if (!this.stationId) return;
     
     try {
@@ -327,8 +318,24 @@ class PlayerComponent extends HTMLElement {
       if (response.ok) {
         const data = await response.json();
         if (data.tracks && data.tracks.length > 0) {
-          // Store the next track for when the current one ends
-          this.nextTrack = data.tracks[0];
+          if (immediate) {
+            // Load and play the next track immediately
+            this.loadTrack(data.tracks[0]);
+            // Auto-play the next track
+            setTimeout(() => {
+              const playPauseBtn = this.querySelector('#play-pause');
+              const audio = this.querySelector('#audio-player');
+              if (playPauseBtn && audio) {
+                audio.play().then(() => {
+                  playPauseBtn.textContent = '⏸';
+                  this.isPlaying = true;
+                }).catch(console.error);
+              }
+            }, 100);
+          } else {
+            // Store the next track for when the current one ends
+            this.nextTrack = data.tracks[0];
+          }
         }
       }
     } catch (error) {
@@ -337,8 +344,8 @@ class PlayerComponent extends HTMLElement {
   }
 
   trackEnded() {
-    // If we haven't submitted the track yet (maybe user scrubbed to end), submit it now
-    if (!this.eightyPercentSubmitted && this.currentTrack && this.stationId) {
+    // If we haven't submitted the track yet, submit it now
+    if (!this.trackSubmitted && this.currentTrack && this.stationId) {
       this.markTrackAsListened();
     }
     
