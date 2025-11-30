@@ -194,8 +194,8 @@ class StationCreate extends HTMLElement {
     // Get current form values directly from the form elements to ensure we have the latest values
     // This ensures we get the value even if the user hasn't tabbed out of the field
     const ignoreLive = this.querySelector('#ignore-live')?.checked || false;
-    const replayCooldown = parseInt(this.querySelector('#replay-cooldown')?.value) || 50;
-    const artistDownrank = parseFloat(this.querySelector('#artist-downrank')?.value) || 0.995;
+    const replayCooldown = parseInt(this.querySelector('#replay-cooldown')?.value);
+    const artistDownrank = parseFloat(this.querySelector('#artist-downrank')?.value);
 
     console.log('Form values:', { stationName, ignoreLive, replayCooldown, artistDownrank });
 

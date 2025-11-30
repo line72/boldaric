@@ -21,6 +21,9 @@ class StationList extends HTMLElement {
 
       if (response.ok) {
         this.stations = await response.json();
+      } else if (response.status === 401) {
+        // Unauthorized - redirect to login
+        document.querySelector('boldaric-app').navigateTo('login');
       }
     } catch (error) {
       console.error('Error loading stations:', error);
@@ -96,6 +99,9 @@ class StationList extends HTMLElement {
           stationId: stationId,
           track: firstTrack
         });
+      } else if (response.status === 401) {
+        // Unauthorized - redirect to login
+        document.querySelector('boldaric-app').navigateTo('login');
       }
     } catch (error) {
       console.error('Error starting station:', error);

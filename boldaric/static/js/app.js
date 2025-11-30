@@ -35,6 +35,8 @@ class BoldaricApp extends HTMLElement {
         return '<station-list></station-list>';
       case 'create-station':
         return '<station-create></station-create>';
+      case 'edit-station':
+        return `<station-edit station-id="${this.stationId}"></station-edit>`;
       case 'player':
         return `<player-component station-id="${this.stationId}"></player-component>`;
       default:
