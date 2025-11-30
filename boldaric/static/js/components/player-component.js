@@ -291,7 +291,23 @@ class PlayerComponent extends HTMLElement {
       });
 
       if (response.ok) {
-        this.loadNextTrack();
+        // Load the next track immediately when thumbs down is clicked
+        this.loadNextTrack().then(() => {
+          if (this.nextTrack) {
+            this.loadTrack(this.nextTrack);
+            // Auto-play the next track
+            setTimeout(() => {
+              const playPauseBtn = this.querySelector('#play-pause');
+              const audio = this.querySelector('#audio-player');
+              if (playPauseBtn && audio) {
+                audio.play().then(() => {
+                  playPauseBtn.textContent = '⏸';
+                  this.isPlaying = true;
+                }).catch(console.error);
+              }
+            }, 100);
+          }
+        });
       }
     } catch (error) {
       console.error('Thumbs down error:', error);
