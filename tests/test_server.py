@@ -14,6 +14,7 @@ from boldaric.server import (
 )
 from boldaric.stationdb import StationDB
 from boldaric.vectordb import VectorDB
+from boldaric.models.track import Track
 import boldaric.subsonic
 import boldaric.feature_helper
 
@@ -41,6 +42,21 @@ class TestServer(AioHTTPTestCase):
         self.temp_dir.cleanup()
         super().tearDown()
 
+    def add_track(self, subsonic_id, artist, album, track):
+        self.station_db.add_track(artist, album, track, 1, '',
+                                  subsonic_id, '', '', '', 'album', 'official',
+                                  [], [0.1]*128, #genre
+                                  [0.2]*13, [0.21]*13, 0.0, #mfcc
+                                  0.5, 0.5, 0.5, #bpm-dynamic_complexity
+                                  0.5, 0.5, 0.5, #energy
+                                  'minor', 'g', 1.0, #key
+                                  3, 0.23, #chord
+                                  0.44, 2, 0.55, #vocal
+                                  0.001, 0.88, 128.0, 1.0, 1.0, # groove
+                                  0.34, 0.55, 0.29, 0.001, 0.02, # mood
+                                  0.43, 0.34, 0.53 #spectral
+                                  )
+        
     async def get_application(self):
         """Create application for testing."""
         app = web.Application()
@@ -154,12 +170,13 @@ class TestServer(AioHTTPTestCase):
             "features": {}
         }
         self.mock_vec_db.get_track.return_value = mock_track
+        self.add_track('song123', 'Test Artist', 'Test Album', 'Test Title')
         
         # Mock subsonic functions
         with patch('boldaric.subsonic.make_stream_link', return_value="http://example.com/stream"):
             with patch('boldaric.subsonic.make_album_art_link', return_value="http://example.com/cover"):
-                # Mock the features_to_list function
-                with patch('boldaric.feature_helper.features_to_list', return_value=[0.1] * 148):
+                # Mock the track_to_embeddings function
+                with patch('boldaric.feature_helper.track_to_embeddings', return_value=[0.1] * 148):
                     # Make request
                     resp = await self.client.request(
                         "POST",
@@ -306,9 +323,10 @@ class TestServer(AioHTTPTestCase):
             "features": {}
         }
         self.mock_vec_db.get_track.return_value = mock_track
+        self.add_track('song123', 'Test Artist', 'Test Album', 'Test Title')
         
-        # Mock the features_to_list function
-        with patch('boldaric.feature_helper.features_to_list', return_value=[0.1] * 148):
+        # Mock the track_to_embeddings function
+        with patch('boldaric.feature_helper.track_to_embeddings', return_value=[0.1] * 148):
             # Make request
             resp = await self.client.request(
                 "POST",
@@ -327,7 +345,7 @@ class TestServer(AioHTTPTestCase):
         # Verify track was added to history
         history = self.station_db.get_track_history(station_id)
         assert len(history) == 1
-        assert history[0].subsonic_id == "song123"
+        assert history[0].track.subsonic_id == "song123"
 
     async def test_add_song_to_history(self):
         """Test adding a song to history."""
@@ -345,9 +363,10 @@ class TestServer(AioHTTPTestCase):
             "features": {}
         }
         self.mock_vec_db.get_track.return_value = mock_track
+        self.add_track('song123', 'Test Artist', 'Test Album', 'Test Title')
         
-        # Mock the features_to_list function
-        with patch('boldaric.feature_helper.features_to_list', return_value=[0.1] * 148):
+        # Mock the track_to_embeddings function
+        with patch('boldaric.feature_helper.track_to_embeddings', return_value=[0.1] * 148):
             # Make request
             resp = await self.client.request(
                 "PUT",
@@ -362,7 +381,7 @@ class TestServer(AioHTTPTestCase):
         # Verify track was added to history
         history = self.station_db.get_track_history(station_id)
         assert len(history) == 1
-        assert history[0].subsonic_id == "song123"
+        assert history[0].track.subsonic_id == "song123"
 
     async def test_thumbs_up(self):
         """Test giving a song a thumbs up."""
@@ -380,9 +399,10 @@ class TestServer(AioHTTPTestCase):
             "features": {}
         }
         self.mock_vec_db.get_track.return_value = mock_track
+        self.add_track('song123', 'Test Artist', 'Test Album', 'Test Title')
         
-        # Mock the features_to_list function
-        with patch('boldaric.feature_helper.features_to_list', return_value=[0.1] * 148):
+        # Mock the track_to_embeddings function
+        with patch('boldaric.feature_helper.track_to_embeddings', return_value=[0.1] * 148):
             # Make request
             resp = await self.client.request(
                 "POST",
@@ -397,7 +417,7 @@ class TestServer(AioHTTPTestCase):
         # Verify track was added to history with correct rating
         history = self.station_db.get_track_history(station_id)
         assert len(history) == 1
-        assert history[0].subsonic_id == "song123"
+        assert history[0].track.subsonic_id == "song123"
         assert history[0].is_thumbs_downed == False
 
     async def test_thumbs_down(self):
@@ -416,9 +436,10 @@ class TestServer(AioHTTPTestCase):
             "features": {}
         }
         self.mock_vec_db.get_track.return_value = mock_track
+        self.add_track('song123', 'Test Artist', 'Test Album', 'Test Title')
         
-        # Mock the features_to_list function
-        with patch('boldaric.feature_helper.features_to_list', return_value=[0.1] * 148):
+        # Mock the track_to_embeddings function
+        with patch('boldaric.feature_helper.track_to_embeddings', return_value=[0.1] * 148):
             # Make request
             resp = await self.client.request(
                 "POST",
@@ -433,7 +454,7 @@ class TestServer(AioHTTPTestCase):
         # Verify track was added to history with thumbs down
         history = self.station_db.get_track_history(station_id)
         assert len(history) == 1
-        assert history[0].subsonic_id == "song123"
+        assert history[0].track.subsonic_id == "song123"
         assert history[0].is_thumbs_downed == True
 
     async def test_get_next_song_for_station(self):
@@ -466,6 +487,9 @@ class TestServer(AioHTTPTestCase):
             }
         ]
         self.mock_vec_db.query_similar.return_value = mock_tracks
+        for i in mock_tracks:
+            m = i['metadata']
+            self.add_track(m['subsonic_id'], m['artist'], m['album'], m['title'])
         
         # Mock subsonic functions
         with patch('boldaric.subsonic.make_stream_link', return_value="http://example.com/stream"):
@@ -474,7 +498,7 @@ class TestServer(AioHTTPTestCase):
                 with patch('boldaric.simulator.make_history', return_value=[]):
                     with patch('boldaric.simulator.add_history', return_value=[]):
                         with patch('boldaric.simulator.attract', return_value=[0.1] * 148):
-                            with patch('boldaric.feature_helper.list_to_features', return_value={}):
+                            with patch('boldaric.feature_helper.track_to_embeddings', return_value={}):
                                 # Mock multiprocessing pool methods
                                 self.mock_pool.apply_async.return_value.get.return_value = mock_tracks
                                 

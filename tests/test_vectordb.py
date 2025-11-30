@@ -7,6 +7,8 @@ import copy
 import pytest
 
 from boldaric.vectordb import VectorDB, TrackMetadata
+from boldaric.models.track import Track
+from boldaric.feature_helper import track_to_embeddings
 
 # Seed numpy for consistent test results
 np.random.seed(42)
@@ -41,6 +43,26 @@ SAMPLE_FEATURES = {
 
 SAMPLE_SUBSONIC_ID = "track-123"
 
+def make_track(features):
+    return Track(
+        artist = 'Test Artist',
+        album = 'Test Album',
+        track = 'Test Track',
+        genre_embedding = np.array(features['genre_embeddings']).tobytes(),
+        mfcc_mean = np.array(features['mfcc']['mean']).tobytes(),
+        groove_danceability = features['groove']['danceability'],
+        groove_tempo_stability = features['groove']['tempo_stability'],
+        mood_aggressiveness = features['mood']['probabilities']['aggressive'],
+        mood_happiness = features['mood']['probabilities']['happy'],
+        mood_partiness = features['mood']['probabilities']['party'],
+        mood_relaxedness = features['mood']['probabilities']['relaxed'],
+        mood_sadness = features['mood']['probabilities']['sad'],
+        loudness = features['loudness'],
+        dynamic_complexity = features['dynamic_complexity'],
+        spectral_character_brightness = features['spectral_character']['brightness'],
+        key_tonic = features['key']['key'],
+        key_scale = features['key']['scale']
+    )
 
 @pytest.fixture
 def temp_db():
@@ -53,32 +75,28 @@ def temp_db():
 
 
 def test_add_track(temp_db):
-    temp_db.add_track(SAMPLE_SUBSONIC_ID, SAMPLE_FEATURES)
+    t = make_track(SAMPLE_FEATURES)
+    temp_db.add_track(SAMPLE_SUBSONIC_ID, t)
 
     track = temp_db.get_track(SAMPLE_SUBSONIC_ID)
     assert track is not None
     assert track["metadata"]["artist"] == "Test Artist"
+    assert track["metadata"]["album"] == "Test Album"
     assert track["metadata"]["title"] == "Test Track"
-    assert track["metadata"]["tagged_genres"] == "rock; alternative"
-    assert track["metadata"]["musicbrainz_trackid"] == "mb-track-123"
-    assert track["metadata"]["tech_duration"] == "180"
-    assert track["metadata"]["tech_sample_rate"] == "44100"
-    assert track["metadata"]["tech_bit_depth"] == "16"
-    assert track["metadata"]["tech_channels"] == "2"
-    assert track["metadata"]["tech_loudness"] == "-10.5"
-    assert track["metadata"]["tech_dynamic_complexity"] == "0.6"
-    assert track["metadata"]["mood_happy"] > 0.5
+    assert track["metadata"]["subsonic_id"] == SAMPLE_SUBSONIC_ID
 
 
 def test_track_exists(temp_db):
     assert not temp_db.track_exists(SAMPLE_SUBSONIC_ID)
-    temp_db.add_track(SAMPLE_SUBSONIC_ID, SAMPLE_FEATURES)
+    t = make_track(SAMPLE_FEATURES)
+    temp_db.add_track(SAMPLE_SUBSONIC_ID, t)
     assert temp_db.track_exists(SAMPLE_SUBSONIC_ID)
 
 
 def test_query_similar(temp_db):
     # Add the base track
-    temp_db.add_track(SAMPLE_SUBSONIC_ID, SAMPLE_FEATURES)
+    t = make_track(SAMPLE_FEATURES)
+    temp_db.add_track(SAMPLE_SUBSONIC_ID, t)
 
     # Add a similar track
     similar_features = copy.deepcopy(SAMPLE_FEATURES)
@@ -88,7 +106,8 @@ def test_query_similar(temp_db):
     similar_features["groove"]["tempo_stability"] += 0.01
     similar_features["mood"]["probabilities"]["happy"] += 0.01
     similar_features["metadata"]["title"] = "Similar Track"
-    temp_db.add_track("similar-track", similar_features)
+    t2 = make_track(similar_features)
+    temp_db.add_track("similar-track", t2)
 
     # Add a very different track
     different_features = copy.deepcopy(SAMPLE_FEATURES)
@@ -98,9 +117,11 @@ def test_query_similar(temp_db):
     different_features["groove"]["tempo_stability"] = 0.1
     different_features["mood"]["probabilities"]["sad"] = 0.9
     similar_features["metadata"]["title"] = "Different Track"
-    temp_db.add_track("different-track", different_features)
+    t3 = make_track(different_features)
+    temp_db.add_track("different-track", t3)
 
-    results = temp_db.query_similar(SAMPLE_FEATURES, n_results=2)
+    features = track_to_embeddings(t)
+    results = temp_db.query_similar(features, n_results=2)
     
     assert len(results) == 2
     
@@ -108,9 +129,3 @@ def test_query_similar(temp_db):
     assert results[1]["id"] == "similar-track"
     assert results[0]["similarity"] > results[1]["similarity"], "Results should be ordered by similarity"
 
-    # Check contributions
-    for result in results:
-        contribs = result["feature_contributions"]
-        assert all(0 <= contribs[feat] <= 100 for feat in contribs)
-        sims = result["component_similarities"]
-        assert all(0 <= sims[feat] <= 1 for feat in sims)
