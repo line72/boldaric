@@ -35,6 +35,11 @@ class PlayerComponent extends HTMLElement {
     }
   }
 
+  disconnectedCallback() {
+    // Clean up event listeners when component is removed
+    this.cleanupEventListeners();
+  }
+
   render() {
     this.innerHTML = `
       <div class="player-container">
@@ -77,7 +82,7 @@ class PlayerComponent extends HTMLElement {
 
   setupEventListeners() {
     // Remove any existing event listeners to prevent duplicates
-    this.removeEventListener('click', this.handleGlobalClickBound);
+    this.cleanupEventListeners();
     
     // Bind methods once and store the bound references for proper removal
     if (!this.handleGlobalClickBound) {
@@ -110,14 +115,6 @@ class PlayerComponent extends HTMLElement {
 
     const audio = this.querySelector('#audio-player');
     if (audio) {
-      // Remove existing listeners to prevent duplicates
-      audio.removeEventListener('timeupdate', this.updateProgressBound);
-      audio.removeEventListener('ended', this.trackEndedBound);
-      audio.removeEventListener('loadedmetadata', this.onMetadataLoadedBound);
-      audio.removeEventListener('canplay', this.onCanPlayBound);
-      audio.removeEventListener('play', this.onPlayBound);
-      audio.removeEventListener('pause', this.onPauseBound);
-      
       // Add event listeners
       audio.addEventListener('timeupdate', this.updateProgressBound);
       audio.addEventListener('ended', this.trackEndedBound);
@@ -129,9 +126,31 @@ class PlayerComponent extends HTMLElement {
     
     const progressBar = this.querySelector('#progress-bar');
     if (progressBar) {
-      // Remove existing listeners to prevent duplicates
-      progressBar.removeEventListener('input', this.seekBound);
       progressBar.addEventListener('input', this.seekBound);
+    }
+  }
+
+  cleanupEventListeners() {
+    // Remove global click listener
+    if (this.handleGlobalClickBound) {
+      this.removeEventListener('click', this.handleGlobalClickBound);
+    }
+    
+    // Remove audio element listeners
+    const audio = this.querySelector('#audio-player');
+    if (audio && this.updateProgressBound) {
+      audio.removeEventListener('timeupdate', this.updateProgressBound);
+      audio.removeEventListener('ended', this.trackEndedBound);
+      audio.removeEventListener('loadedmetadata', this.onMetadataLoadedBound);
+      audio.removeEventListener('canplay', this.onCanPlayBound);
+      audio.removeEventListener('play', this.onPlayBound);
+      audio.removeEventListener('pause', this.onPauseBound);
+    }
+    
+    // Remove progress bar listener
+    const progressBar = this.querySelector('#progress-bar');
+    if (progressBar && this.seekBound) {
+      progressBar.removeEventListener('input', this.seekBound);
     }
   }
 
