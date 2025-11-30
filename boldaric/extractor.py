@@ -103,6 +103,8 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
     if audio_file is None:
         audio_file = File(file_path)
     if audio_44_1k is None:
+        import essentia.standard as es
+
         loader_44_1k = es.MonoLoader(filename=file_path, sampleRate=44100)
         audio_44_1k = loader_44_1k()
     
