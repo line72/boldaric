@@ -176,6 +176,11 @@ class PlayerComponent extends HTMLElement {
     if (playPauseBtn) {
       playPauseBtn.textContent = '⏸';
     }
+    
+    // Update media session playback state
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'playing';
+    }
   }
 
   onPause() {
@@ -183,6 +188,11 @@ class PlayerComponent extends HTMLElement {
     const playPauseBtn = this.querySelector('#play-pause');
     if (playPauseBtn) {
       playPauseBtn.textContent = '▶';
+    }
+    
+    // Update media session playback state
+    if ('mediaSession' in navigator) {
+      navigator.mediaSession.playbackState = 'paused';
     }
   }
 
@@ -218,6 +228,9 @@ class PlayerComponent extends HTMLElement {
       // Disable next/previous track controls
       navigator.mediaSession.setActionHandler('previoustrack', null);
       navigator.mediaSession.setActionHandler('nexttrack', null);
+      
+      // Set initial playback state
+      navigator.mediaSession.playbackState = this.isPlaying ? 'playing' : 'paused';
     }
   }
 
@@ -228,6 +241,7 @@ class PlayerComponent extends HTMLElement {
       navigator.mediaSession.setActionHandler('pause', null);
       navigator.mediaSession.setActionHandler('previoustrack', null);
       navigator.mediaSession.setActionHandler('nexttrack', null);
+      navigator.mediaSession.playbackState = 'none';
     }
   }
 
