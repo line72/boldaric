@@ -11,7 +11,7 @@ class LoginComponent extends HTMLElement {
           </div>
           <button type="submit">Login</button>
         </form>
-        <div id="login-error" class="error-message"></div>
+        <div id="login-error" class="error-message" style="display: none;"></div>
       </div>
     `;
   }
@@ -48,7 +48,9 @@ class LoginComponent extends HTMLElement {
   }
 
   showError(message) {
-    this.querySelector('#login-error').textContent = message;
+    const errorDiv = this.querySelector('#login-error');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
   }
 }
 

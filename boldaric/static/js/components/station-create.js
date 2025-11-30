@@ -17,6 +17,14 @@ class StationCreate extends HTMLElement {
     this.setupEventListeners();
     // Restore form values if they exist
     this.restoreFormValues();
+    
+    // Focus the station name input by default
+    setTimeout(() => {
+      const stationNameInput = this.querySelector('#station-name');
+      if (stationNameInput) {
+        stationNameInput.focus();
+      }
+    }, 100);
   }
 
   render() {
@@ -31,8 +39,10 @@ class StationCreate extends HTMLElement {
           
           <div class="form-group">
             <label for="seed-song-search">Seed Song:</label>
-            <input type="text" id="seed-song-search" placeholder="Search for a song...">
-            <button type="button" id="search-btn">Search</button>
+            <div class="input-with-button">
+              <input type="text" id="seed-song-search" placeholder="Search for a song...">
+              <button type="button" id="search-btn">🔍</button>
+            </div>
           </div>
           
           <div id="search-results" class="search-results">
@@ -117,6 +127,15 @@ class StationCreate extends HTMLElement {
       if (searchBtn) {
         searchBtn.addEventListener('click', () => {
           this.searchSongs();
+        });
+      }
+
+      const seedSongInput = this.querySelector('#seed-song-search');
+      if (seedSongInput) {
+        seedSongInput.addEventListener('keypress', (event) => {
+          if (event.key === 'Enter') {
+            this.searchSongs();
+          }
         });
       }
 

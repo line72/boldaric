@@ -49,6 +49,13 @@ class StationEdit extends HTMLElement {
         <h2>Edit Station: ${this.station.name}</h2>
         <form id="edit-station-form">
           <div class="form-group">
+            <label>
+              <input type="checkbox" id="ignore-live" ${this.station.ignore_live ? 'checked' : ''}>
+              Ignore live recordings
+            </label>
+          </div>
+          
+          <div class="form-group">
             <label for="replay-cooldown">Replay Song Cooldown:</label>
             <input type="number" id="replay-cooldown" value="${this.station.replay_song_cooldown}" min="0">
           </div>
@@ -56,13 +63,6 @@ class StationEdit extends HTMLElement {
           <div class="form-group">
             <label for="artist-downrank">Artist Downrank (0.0 - 1.0):</label>
             <input type="number" id="artist-downrank" value="${this.station.replay_artist_downrank}" min="0" max="1" step="0.001">
-          </div>
-          
-          <div class="form-group">
-            <label>
-              <input type="checkbox" id="ignore-live" ${this.station.ignore_live ? 'checked' : ''}>
-              Ignore live recordings
-            </label>
           </div>
           
           <div class="form-actions">

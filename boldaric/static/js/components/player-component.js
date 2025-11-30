@@ -39,8 +39,7 @@ class PlayerComponent extends HTMLElement {
     this.innerHTML = `
       <div class="player-container">
         <div class="player-header">
-          <button id="back-btn" class="back-btn">← Back to Stations</button>
-          <h2>Now Playing</h2>
+          <button id="back-btn" class="back-btn">←</button>
         </div>
         
         <div class="track-info">
