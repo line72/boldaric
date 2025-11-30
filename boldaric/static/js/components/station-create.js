@@ -122,7 +122,8 @@ class StationCreate extends HTMLElement {
 
       const searchBtn = this.querySelector('#search-btn');
       if (searchBtn) {
-        searchBtn.addEventListener('click', () => {
+        searchBtn.addEventListener('click', (event) => {
+          event.preventDefault();
           this.searchSongs();
         });
       }
@@ -131,6 +132,7 @@ class StationCreate extends HTMLElement {
       if (seedSongInput) {
         seedSongInput.addEventListener('keypress', (event) => {
           if (event.key === 'Enter') {
+            event.preventDefault();
             this.searchSongs();
           }
         });
