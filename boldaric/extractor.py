@@ -10,6 +10,7 @@
 
 import logging
 import os
+import ast
 
 import numpy as np
 from mutagen import File
@@ -172,11 +173,11 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
         # as "b'hello'" -- which indicates whatever tagger this was
         # incorrectly did a byte -> str conversion. This is a lame
         # attempt at fixing this bullshit
-        try:
-            import ast
-            return ast.literal_eval(value).decode('utf-8')
-        except ValueError:
-            pass
+        if isinstance(value, str) and value.startswith("b'"):
+            try:
+                return ast.literal_eval(value).decode('utf-8')
+            except ValueError:
+                pass
         
         return str(value)
     
