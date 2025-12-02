@@ -12,8 +12,8 @@ class TrackHistory(Base):
     station_id = Column(Integer, ForeignKey("stations.id"), nullable=False)
     is_thumbs_downed = Column(Boolean, default=False)
     rating = Column(Integer, default=0)  # Add rating column
-    created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    created_at = Column(DateTime, default=func.now(), nullable=False)
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
 
     # Add foreign key relationship to Track
     track_id = Column(Integer, ForeignKey("tracks.id"), nullable=False)
