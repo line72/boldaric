@@ -263,7 +263,7 @@ class StationDB:
             history = simulator.make_history()
             for history_item in track_histories:
                 # Get the embedding for this track
-                embedding = feature_helper.track_to_embeddings(history_item.track)
+                embedding = feature_helper.track_to_embeddings_default_normalization(history_item.track)
                 # Check that embedding has the right dimension (148)
                 if len(embedding) == 148:
                     history = simulator.add_history(
@@ -283,7 +283,7 @@ class StationDB:
         history = simulator.make_history()
         for track_history in tracks:
             # Get the embedding for this track
-            embedding = feature_helper.track_to_embeddings(track_history.track)
+            embedding = feature_helper.track_to_embeddings_default_normalization(track_history.track)
             # Check that embedding has the right dimension (148)
             if len(embedding) == 148:
                 history = simulator.add_history(

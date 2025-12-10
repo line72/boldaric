@@ -64,7 +64,13 @@ class VectorDB:
 
     def add_track(self, subsonic_id: str, track: Track):
         """Store a track's features"""
-        embedding = feature_helper.track_to_embeddings(track)
+
+        # For now, use the old (default) normalization technique
+        #  otherwise, some embeddings dominate.
+        # A future plan, is to either:
+        #  - Store un-normalized embeddings in the db, then do scaling when we query
+        #  - Or, have multiple collections, each with a category of embedding (default, mood, energy, genre similarity, ...)
+        embedding = feature_helper.track_to_embeddings_default_normalization(track)
 
         metadata = TrackMetadata(
             subsonic_id=subsonic_id,
