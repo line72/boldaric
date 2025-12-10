@@ -418,6 +418,23 @@ EXPECTED_EXTRACTION = {
     },
 }
 
+def assert_approx_equal(actual, expected, tolerance=1e-6):
+    """Recursively compare values, using approx for floats and == for others"""
+    if isinstance(expected, dict):
+        assert isinstance(actual, dict), f"Expected dict, got {type(actual)}"
+        assert set(actual.keys()) == set(expected.keys()), f"Key mismatch: {set(actual.keys())} vs {set(expected.keys())}"
+        for key in expected:
+            assert_approx_equal(actual[key], expected[key], tolerance)
+    elif isinstance(expected, list):
+        assert isinstance(actual, list), f"Expected list, got {type(actual)}"
+        assert len(actual) == len(expected), f"List length mismatch: {len(actual)} vs {len(expected)}"
+        for i, (act, exp) in enumerate(zip(actual, expected)):
+            assert_approx_equal(act, exp, tolerance)
+    elif isinstance(expected, float):
+        assert actual == pytest.approx(expected, abs=tolerance), f"Float mismatch: {actual} != {expected}"
+    else:
+        assert actual == expected, f"Value mismatch: {actual} != {expected}"
+
 
 @pytest.fixture
 def sample_audio_file():
@@ -448,8 +465,10 @@ def test_extract_features_structure(sample_audio_file):
 
     assert isinstance(features, dict)
     assert features.keys() == expected_keys
-    assert features == EXPECTED_EXTRACTION
 
+    # use approximate values, since
+    #  dependending on hardware, precision is off
+    assert_approx_equal(features, EXPECTED_EXTRACTION) 
 
     # Check that genre predictions have label-score pairs
     assert all(
