@@ -1,4 +1,5 @@
 2025-12-10  Marcus Dillavou  <line72@line72.net>
+	* BOL-27 - Add web frontend
 	* BOL-21 - Change how we index
 	* BOL-29 - Add github actions
 
