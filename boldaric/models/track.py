@@ -14,7 +14,7 @@ class Track(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     artist = Column(String)
     album = Column(String)
-    track = Column(String)
+    title = Column(String)
     track_number = Column(Integer)
     genre = Column(String)
     subsonic_id = Column(String, unique=True)

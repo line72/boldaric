@@ -319,7 +319,7 @@ class StationDB:
         self,
         artist: str,
         album: str,
-        track: str,
+        title: str,
         track_number: int,
         genre: str,
         subsonic_id: str,
@@ -386,7 +386,7 @@ class StationDB:
             track_record = Track(
                 artist=artist,
                 album=album,
-                track=track,
+                title=title,
                 track_number=track_number,
                 genre=genre,
                 subsonic_id=subsonic_id,

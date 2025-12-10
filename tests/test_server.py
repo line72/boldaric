@@ -53,11 +53,11 @@ class TestServer(AioHTTPTestCase):
         self.temp_dir.cleanup()
         super().tearDown()
 
-    def add_track(self, subsonic_id, artist, album, track):
+    def add_track(self, subsonic_id, artist, album, title):
         self.station_db.add_track(
             artist,
             album,
-            track,
+            title,
             1,
             "",
             subsonic_id,

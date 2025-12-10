@@ -248,7 +248,7 @@ def test_add_track_to_history(station_db):
         t = Track(
             artist="Test Artist",
             album="Test Album",
-            track="Test Title",
+            title="Test Title",
             subsonic_id="song123",
         )
         session.add(t)
@@ -276,7 +276,7 @@ def test_update_track_in_history(station_db):
         t1 = Track(
             artist="Test Artist",
             album="Test Album",
-            track="Test Title",
+            title="Test Title",
             subsonic_id="song123",
         )
         session.add(t1)
@@ -317,15 +317,15 @@ def test_get_track_history(station_db):
         base_time = datetime(2023, 1, 1, 12, 0, 0)
 
         track1 = Track(
-            artist="Artist 1", album="Album 1", track="Title 1", subsonic_id="song1"
+            artist="Artist 1", album="Album 1", title="Title 1", subsonic_id="song1"
         )
 
         track2 = Track(
-            artist="Artist 2", album="Album 2", track="Title 2", subsonic_id="song2"
+            artist="Artist 2", album="Album 2", title="Title 2", subsonic_id="song2"
         )
 
         track3 = Track(
-            artist="Artist 3", album="Album 3", track="Title 3", subsonic_id="song3"
+            artist="Artist 3", album="Album 3", title="Title 3", subsonic_id="song3"
         )
 
         TrackHistory(
@@ -371,15 +371,15 @@ def test_get_thumbs_downed_history(station_db):
 
     with station_db.Session() as session:
         t1 = Track(
-            artist="Artist 1", album="Album 1", track="Title 1", subsonic_id="song1"
+            artist="Artist 1", album="Album 1", title="Title 1", subsonic_id="song1"
         )
 
         t2 = Track(
-            artist="Artist 2", album="Album 2", track="Title 2", subsonic_id="song2"
+            artist="Artist 2", album="Album 2", title="Title 2", subsonic_id="song2"
         )
 
         t3 = Track(
-            artist="Artist 3", album="Album 3", track="Title 3", subsonic_id="song3"
+            artist="Artist 3", album="Album 3", title="Title 3", subsonic_id="song3"
         )
         session.add_all([t1, t2, t3])
         session.commit()
@@ -425,4 +425,4 @@ def test_load_station_history(station_db):
     assert len(tracks) == 2
     assert len(thumbs_downed) == 1
     assert thumbs_downed[0].track.artist == "Artist 2"
-    assert thumbs_downed[0].track.track == "Title 2"
+    assert thumbs_downed[0].track.title == "Title 2"

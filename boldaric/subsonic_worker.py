@@ -157,7 +157,7 @@ def process_song(song, conn, stationdb, vectordb):
                     metadata = boldaric.extractor.extract_metadata(temp_file.name)
                     track.artist = metadata["artist"]
                     track.album = metadata["album"]
-                    track.track = metadata["title"]
+                    track.title = metadata["title"]
                     track.track_number = metadata["tracknumber"]
                     track.genre = ";".join(metadata["genre"])
                     track.musicbrainz_artistid = metadata["musicbrainz_artistid"]

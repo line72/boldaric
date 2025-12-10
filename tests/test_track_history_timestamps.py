@@ -36,7 +36,7 @@ def test_track_history_timestamps_on_creation(db_session):
     track = Track(
         artist="Test Artist",
         album="Test Album",
-        track="Test Title",
+        title="Test Title",
         subsonic_id="song123",
     )
     db_session.add(track)
@@ -74,7 +74,7 @@ def test_track_history_updated_at_on_update(db_session):
     track = Track(
         artist="Test Artist",
         album="Test Album",
-        track="Test Title",
+        title="Test Title",
         subsonic_id="song123",
     )
     db_session.add(track)

@@ -59,7 +59,7 @@ def make_track(features):
     return Track(
         artist="Test Artist",
         album="Test Album",
-        track="Test Track",
+        title="Test Track",
         genre_embedding=np.array(features["genre_embeddings"]).tobytes(),
         mfcc_mean=np.array(features["mfcc"]["mean"]).tobytes(),
         groove_danceability=features["groove"]["danceability"],
