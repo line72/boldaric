@@ -7,7 +7,7 @@ from boldaric.extractor import extract_features, extract_metadata
 
 # Test audio file path - this should be a real audio file
 # To run tests, you'll need to provide a real audio file at this path
-TEST_AUDIO_FILE = os.path.join(os.path.abspath('.'), "tests", "test.mp3")
+TEST_AUDIO_FILE = os.path.join(os.path.abspath("."), "tests", "test.mp3")
 
 EXPECTED_EXTRACTION = {
     "bpm": 135.63702392578125,
