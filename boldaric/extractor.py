@@ -10,9 +10,11 @@
 
 import logging
 import os
+import ast
 
 import numpy as np
 from mutagen import File
+from mutagen.id3 import TRCK
 
 from importlib.resources import files
 
@@ -97,9 +99,40 @@ def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 
-def extract_metadata(file_path, audio_file, audio_44_1k):
+def extract_metadata(file_path, audio_file=None, audio_44_1k=None):
     """Extract metadata from audio file."""
-    tags = {"path": os.path.abspath(file_path)}
+    if audio_file is None:
+        audio_file = File(file_path)
+    if audio_44_1k is None:
+        import essentia
+
+        # disable logging in all the dumb possible ways
+        essentia.log.infoActive = False
+        essentia.log.warningActive = False
+
+        import essentia.standard as es
+
+        loader_44_1k = es.MonoLoader(filename=file_path, sampleRate=44100)
+        audio_44_1k = loader_44_1k()
+
+    tags = {
+        "path": os.path.abspath(file_path),
+        "artist": "",
+        "album": "",
+        "title": "",
+        "date": "",
+        "genre": [],
+        "rating": 0.0,
+        "musicbrainz_releasetrackid": "",
+        "musicbrainz_artistid": "",
+        "musicbrainz_releasegroupid": "",
+        "musicbrainz_workid": "",
+        "tracknumber": 0,
+        "releasetype": "album",
+        "releasestatus": "official",
+        "duration": 0,
+        "audio_length": 0,
+    }
 
     # Common tag fields across formats
     tag_mapping = {
@@ -111,12 +144,42 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
         "rating": ["POPM", "RATING", "RATING WMP", "RATING AMAZON"],
         "musicbrainz_releasetrackid": [
             "UFID:http://musicbrainz.org",
+            "TXXX:MUSICBRAINZ_RELEASETRACKID",
             "MUSICBRAINZ_RELEASETRACKID",
         ],
-        "musicbrainz_artistid": ["MUSICBRAINZ_ARTISTID"],
-        "musicbrainz_releasegroupid": ["MUSICBRAINZ_RELEASEGROUPID"],
-        "musicbrainz_workid": ["MUSICBRAINZ_WORKID"],
+        "musicbrainz_artistid": ["TXXX:MUSICBRAINZ_ARTISTID", "MUSICBRAINZ_ARTISTID"],
+        "musicbrainz_releasegroupid": [
+            "TXXX:MUSICBRAINZ_RELEASEGROUPID",
+            "MUSICBRAINZ_RELEASEGROUPID",
+        ],
+        "musicbrainz_workid": ["TXXX:MUSICBRAINZ_WORKID", "MUSICBRAINZ_WORKID"],
+        "tracknumber": ["TRCK", "trkn", "TRACKNUMBER", "TXXX:TRACKNUMBER"],
+        "releasetype": [
+            "MusicBrainz Album Type",
+            "TXXX:RELEASETYPE",
+            "RELEASETYPE",
+            "TXXX:MUSICBRAINZ_ALBUMTYPE",
+            "MUSICBRAINZ_ALBUMTYPE",
+        ],
+        "releasestatus": ["TXXX:RELEASESTATUS", "RELEASESTATUS"],
     }
+
+    def convert_to_string(value):
+        if isinstance(value, (bytes, bytearray)):
+            # Handle binary data directly
+            return value.decode("utf-8", errors="replace").strip("\x00")
+
+        # It appears some tagging software literally encodes a string
+        # as "b'hello'" -- which indicates whatever tagger this was
+        # incorrectly did a byte -> str conversion. This is a lame
+        # attempt at fixing this bullshit
+        if isinstance(value, str) and value.startswith("b'"):
+            try:
+                return ast.literal_eval(value).decode("utf-8")
+            except ValueError:
+                pass
+
+        return str(value)
 
     if hasattr(audio_file, "tags"):
         for field, keys in tag_mapping.items():
@@ -124,13 +187,16 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
                 try:
                     if key in audio_file.tags:
                         value = audio_file.tags[key]
-                        if isinstance(value, list):
-                            value = value[0]
                         # Handle special field types
                         if field == "genre":
-                            tags[field] = [
-                                g.strip() for g in str(value).split(";") if g.strip()
-                            ]
+                            if isinstance(value, list):
+                                tags[field] = [convert_to_string(x) for x in value]
+                            else:
+                                tags[field] = [
+                                    g.strip()
+                                    for g in convert_to_string(value).split(";")
+                                    if g.strip()
+                                ]
                         elif field == "rating":
                             # Normalize rating values from different formats
                             try:
@@ -143,17 +209,38 @@ def extract_metadata(file_path, audio_file, audio_44_1k):
                                     tags[field] = min(rating_val / 255, 1.0)
                             except (ValueError, TypeError):
                                 tags[field] = 0.0
-                        else:
+                        elif field == "tracknumber":
+                            # Handle track number parsing
+                            try:
+                                if isinstance(value, list):
+                                    value = value[0]
+
+                                # Handle formats like "1/10" or just "1"
+                                if isinstance(value, TRCK):
+                                    tags[field] = int(value.text[0])
+                                elif isinstance(value, int):
+                                    tags[field] = value
+                                elif isinstance(value, str) and "/" in value:
+                                    track_num = value.split("/")[0]
+                                    tags[field] = int(track_num)
+                                else:
+                                    tags[field] = int(value)
+                            except (ValueError, TypeError):
+                                tags[field] = 0
+                        elif field == "musicbrainz_releasetrackid" and hasattr(
+                            value, "data"
+                        ):
                             # Handle MusicBrainz ReleaseTrackID UFID format
-                            if field == "musicbrainz_releasetrackid" and hasattr(
-                                value, "data"
-                            ):
-                                # Extract binary data and decode, removing null bytes
-                                tags[field] = value.data.decode(
-                                    "utf-8", errors="replace"
-                                ).strip("\x00")
+                            # Extract binary data and decode, removing null bytes
+                            tags[field] = convert_to_string(value.data)
+                        else:
+                            # Properly handle binary data by checking type first
+                            if isinstance(value, list):
+                                tags[field] = "/".join(
+                                    [convert_to_string(x) for x in value]
+                                )
                             else:
-                                tags[field] = str(value)
+                                tags[field] = convert_to_string(value)
                         break
                 except ValueError:
                     # Skip invalid tag keys for this file format

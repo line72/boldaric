@@ -10,24 +10,27 @@
 
 from typing import Optional, List, Tuple, Dict, Any
 from datetime import datetime, timedelta
+import numpy as np
 import os
 
 from importlib import resources
 
 from . import simulator
+from . import feature_helper
 from .records.station_options import StationOptions
 
 from alembic import command
 from alembic.config import Config
 
 from sqlalchemy import create_engine, and_, or_, func
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session, joinedload
 
-from .models import Base
 from .models.user import User
 from .models.station import Station
 from .models.track_history import TrackHistory
-from .models.embedding_history import EmbeddingHistory
+from .models.track import Track
+from .models.genre import Genre
+from .models.track_genre import TrackGenre
 
 
 class StationDB:
@@ -172,11 +175,9 @@ class StationDB:
     def add_track_to_or_update_history(
         self,
         station_id: int,
-        subsonic_id: str,
-        artist: str,
-        title: str,
-        album: str,
+        track: Track,
         is_thumbs_downed: bool,
+        rating: int = 0,
     ) -> int:
         """Add a track to the station's history. If it is recent, update the existing row"""
         with self.Session() as session:
@@ -185,7 +186,7 @@ class StationDB:
                 session.query(TrackHistory)
                 .filter(
                     TrackHistory.station_id == station_id,
-                    TrackHistory.subsonic_id == subsonic_id,
+                    TrackHistory.track_id == track.id,
                 )
                 .first()
             )
@@ -196,17 +197,18 @@ class StationDB:
                 # Only update thumbs_downed if it's being set to True
                 if is_thumbs_downed:
                     track_history.is_thumbs_downed = is_thumbs_downed
+                # Update rating if provided
+                if rating != 0:
+                    track_history.rating = rating
                 session.commit()
                 return track_history.id
             else:
                 # Create new record
                 track_history = TrackHistory(
+                    track_id=track.id,
                     station_id=station_id,
-                    subsonic_id=subsonic_id,
-                    artist=artist,
-                    title=title,
-                    album=album,
                     is_thumbs_downed=is_thumbs_downed,
+                    rating=rating,
                 )
                 session.add(track_history)
                 session.commit()
@@ -217,9 +219,21 @@ class StationDB:
         with self.Session() as session:
             return (
                 session.query(TrackHistory)
+                .options(joinedload(TrackHistory.track))  # Eagerly load the track
                 .filter(TrackHistory.station_id == station_id)
                 .order_by(TrackHistory.updated_at.desc())
                 .limit(limit)
+                .all()
+            )
+
+    def get_track_history_all(self, station_id: int) -> List[TrackHistory]:
+        """Get recent tracks played by a station."""
+        with self.Session() as session:
+            return (
+                session.query(TrackHistory)
+                .options(joinedload(TrackHistory.track))  # Eagerly load the track
+                .filter(TrackHistory.station_id == station_id)
+                .order_by(TrackHistory.updated_at.desc())
                 .all()
             )
 
@@ -228,6 +242,7 @@ class StationDB:
         with self.Session() as session:
             return (
                 session.query(TrackHistory)
+                .options(joinedload(TrackHistory.track))  # Eagerly load the track
                 .filter(
                     and_(
                         TrackHistory.station_id == station_id,
@@ -238,88 +253,53 @@ class StationDB:
                 .all()
             )
 
-    def add_embedding_history(
-        self,
-        station_id: int,
-        track_history_id: int,
-        embedding: List[float],
-        rating: int,
-    ) -> None:
-        """Add an embedding to the station's history."""
+    def get_embedding_history(self, station_id: int) -> List[List[float]]:
+        """Get embedding history for a station by fetching embeddings from tracks."""
         with self.Session() as session:
-            # Query for embeddings that match this track_history_id
-            # AND were created in the previous 30 minutes OR is the
-            # most recent embedding for this station
-            thirty_minutes_ago = datetime.now() - timedelta(minutes=30)
+            # Get track history with associated tracks for this station
+            track_histories = self.get_track_history_all(station_id)
 
-            recent_embedding = (
-                session.query(EmbeddingHistory)
-                .filter(
-                    and_(
-                        EmbeddingHistory.station_id == station_id,
-                        EmbeddingHistory.track_history_id == track_history_id,
-                        or_(
-                            EmbeddingHistory.created_at >= thirty_minutes_ago,
-                            EmbeddingHistory.id
-                            == session.query(func.max(EmbeddingHistory.id))
-                            .filter(EmbeddingHistory.station_id == station_id)
-                            .scalar_subquery(),
-                        ),
+            # Extract just the embeddings from the tracks
+            history = simulator.make_history()
+            for history_item in track_histories:
+                # Get the embedding for this track
+                embedding = feature_helper.track_to_embeddings_default_normalization(
+                    history_item.track
+                )
+                # Check that embedding has the right dimension (148)
+                if len(embedding) == 148:
+                    history = simulator.add_history(
+                        history, embedding, history_item.rating
                     )
-                )
-                .order_by(EmbeddingHistory.created_at.desc())
-                .first()
-            )
 
-            # we have a recent embedding, if this was created in the last 30 minutes,
-            # then just update it instead of creating a second one. Likely, the client
-            # did something dumb, and played a song twice in a row or something...
-            if recent_embedding:
-                # Update it
-                recent_embedding.rating = rating
-            else:
-                # Create new embedding
-                embedding_history = EmbeddingHistory(
-                    station_id=station_id,
-                    track_history_id=track_history_id,
-                    embedding=embedding,
-                    rating=rating,
-                )
-                session.add(embedding_history)
+            return history
 
-            session.commit()
-
-    def get_embedding_history(self, station_id: int) -> List[EmbeddingHistory]:
-        """Get embedding history for a station."""
-        with self.Session() as session:
-            return (
-                session.query(EmbeddingHistory)
-                .filter(EmbeddingHistory.station_id == station_id)
-                .order_by(EmbeddingHistory.created_at)
-                .all()
-            )
-
+    # !mwd - TODO: This isn't currently used. Remove?
     def load_station_history(
         self, station_id: int
     ) -> Tuple[List[Any], List[TrackHistory], List[Dict[str, Any]]]:
         """Load embedding history, track history, and thumbs downed history for a station."""
-        embeddings = self.get_embedding_history(station_id)
-        tracks = self.get_track_history(station_id)
+        tracks = self.get_track_history_all(station_id)
 
         # Build history from embeddings
         history = simulator.make_history()
-        for embedding in embeddings:
+        for track_history in tracks:
+            # Get the embedding for this track
+            embedding = feature_helper.track_to_embeddings_default_normalization(
+                track_history.track
+            )
             # Check that embedding has the right dimension (148)
-            if len(embedding.embedding) == 148:
+            if len(embedding) == 148:
                 history = simulator.add_history(
-                    history, embedding.embedding, embedding.rating
+                    history, embedding, track_history.rating
                 )
 
         # Build thumbs downed from track history
         thumbs_downed = []
         with self.Session() as session:
-            thumbs_downed_tracks = (
+            thumbs_downed = (
                 session.query(TrackHistory)
+                .options(joinedload(TrackHistory.track))  # Eagerly load the track
                 .filter(
                     and_(
                         TrackHistory.station_id == station_id,
@@ -330,15 +310,164 @@ class StationDB:
                 .all()
             )
 
-            thumbs_downed = [
-                {
-                    "metadata": {
-                        "artist": track.artist,
-                        "title": track.title,
-                        "album": track.album,
-                    }
-                }
-                for track in thumbs_downed_tracks
-            ]
-
         return history, tracks, thumbs_downed
+
+    # ----------------------
+    # Track Management
+    # ----------------------
+    def add_track(
+        self,
+        artist: str,
+        album: str,
+        title: str,
+        track_number: int,
+        genre: str,
+        subsonic_id: str,
+        musicbrainz_artistid: str,
+        musicbrainz_albumid: str,
+        musicbrainz_trackid: str,
+        releasetype: str,
+        releasestatus: str,
+        genre_list,
+        genre_embedding,
+        mfcc_covariance,
+        mfcc_mean,
+        mfcc_temporal_variation: float,
+        bpm: float,
+        loudness: float,
+        dynamic_complexity: float,
+        energy_curve_mean: float,
+        energy_curve_std: float,
+        energy_curve_peak_count: int,
+        key_tonic: str,
+        key_scale: str,
+        key_confidence: float,
+        chord_unique_chords: int,
+        chord_change_rate: float,
+        vocal_pitch_presence_ratio: float,
+        vocal_pitch_segment_count: int,
+        vocal_avg_pitch_duration: float,
+        groove_beat_consistency: float,
+        groove_danceability: float,
+        groove_dnc_bpm: float,
+        groove_syncopation: float,
+        groove_tempo_stability: float,
+        mood_aggressiveness: float,
+        mood_happiness: float,
+        mood_partiness: float,
+        mood_relaxedness: float,
+        mood_sadness: float,
+        spectral_character_brightness: float,
+        spectral_character_contrast_mean: float,
+        spectral_character_valley_std: float,
+    ) -> Track:
+        # Convert lists to numpy arrays and serialize as binary data
+        def serialize_array(arr):
+            if arr is None:
+                return None
+            if isinstance(arr, list):
+                arr = np.array(arr)
+            return arr.tobytes()
+
+        genre_embedding_bytes = serialize_array(genre_embedding)
+        mfcc_covariance_bytes = serialize_array(mfcc_covariance)
+        mfcc_mean_bytes = serialize_array(mfcc_mean)
+
+        with self.Session() as session:
+            # Check if track already exists
+            existing_track = (
+                session.query(Track).filter(Track.subsonic_id == subsonic_id).first()
+            )
+
+            if existing_track:
+                return existing_track
+
+            # Create a new track record
+            track_record = Track(
+                artist=artist,
+                album=album,
+                title=title,
+                track_number=track_number,
+                genre=genre,
+                subsonic_id=subsonic_id,
+                musicbrainz_artistid=musicbrainz_artistid,
+                musicbrainz_albumid=musicbrainz_albumid,
+                musicbrainz_trackid=musicbrainz_trackid,
+                releasetype=releasetype,
+                releasestatus=releasestatus,
+                genre_embedding=genre_embedding_bytes,
+                mfcc_covariance=mfcc_covariance_bytes,
+                mfcc_mean=mfcc_mean_bytes,
+                mfcc_temporal_variation=mfcc_temporal_variation,
+                bpm=bpm,
+                loudness=loudness,
+                dynamic_complexity=dynamic_complexity,
+                energy_curve_mean=energy_curve_mean,
+                energy_curve_std=energy_curve_std,
+                energy_curve_peak_count=energy_curve_peak_count,
+                key_tonic=key_tonic,
+                key_scale=key_scale,
+                key_confidence=key_confidence,
+                chord_unique_chords=chord_unique_chords,
+                chord_change_rate=chord_change_rate,
+                vocal_pitch_presence_ratio=vocal_pitch_presence_ratio,
+                vocal_pitch_segment_count=vocal_pitch_segment_count,
+                vocal_avg_pitch_duration=vocal_avg_pitch_duration,
+                groove_beat_consistency=groove_beat_consistency,
+                groove_danceability=groove_danceability,
+                groove_dnc_bpm=groove_dnc_bpm,
+                groove_syncopation=groove_syncopation,
+                groove_tempo_stability=groove_tempo_stability,
+                mood_aggressiveness=mood_aggressiveness,
+                mood_happiness=mood_happiness,
+                mood_partiness=mood_partiness,
+                mood_relaxedness=mood_relaxedness,
+                mood_sadness=mood_sadness,
+                spectral_character_brightness=spectral_character_brightness,
+                spectral_character_contrast_mean=spectral_character_contrast_mean,
+                spectral_character_valley_std=spectral_character_valley_std,
+            )
+
+            session.add(track_record)
+            session.commit()
+
+            # Link genres using genre_list which looks like [{"label": "Heavy Metal", "score", 0.932}, ...]
+            if genre_list:
+                for genre_item in genre_list:
+                    genre_label = genre_item["label"]
+                    genre_score = genre_item["score"]
+
+                    # Check if genre already exists
+                    genre = (
+                        session.query(Genre).filter(Genre.label == genre_label).first()
+                    )
+                    if not genre:
+                        # Create new genre if it doesn't exist
+                        genre = Genre(label=genre_label)
+                        session.add(genre)
+                        session.flush()  # Get the genre ID without committing
+
+                    # Create track-genre relationship with score
+                    track_genre = TrackGenre(
+                        track_id=track_record.id, genre_id=genre.id, score=genre_score
+                    )
+                    session.add(track_genre)
+
+                session.commit()
+
+            # Merge the track back into the session
+            track_record = session.merge(track_record)
+
+            return track_record
+
+    def update_track(self, track: Track) -> Track:
+        with self.Session() as session:
+            session.merge(track)
+            session.commit()
+
+            return track
+
+    def get_track_by_subsonic_id(self, subsonic_id: str) -> Track | None:
+        """Get a track based on subsonic id"""
+        with self.Session() as session:
+            return session.query(Track).filter(Track.subsonic_id == subsonic_id).first()

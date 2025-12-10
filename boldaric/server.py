@@ -76,22 +76,23 @@ def get_next_songs(
     # Both played and thumbs_downed are lists of TrackHistory models
     chunksize = (len(history) + pool._processes - 1) // pool._processes
 
-    averages = boldaric.simulator.attract(pool, history, chunksize)
-    new_features = boldaric.feature_helper.list_to_features(averages)
+    new_embeddings = boldaric.simulator.attract(pool, history, chunksize)
 
     # query similar
     ignore_list = []
     # ignore ALL thumbs downed
-    ignore_list.extend([(x.artist, x.title) for x in thumbs_downed])
+    ignore_list.extend([(x.track.artist, x.track.title) for x in thumbs_downed])
     # ignore last X played
     replay_song_cooldown = station_options.replay_song_cooldown
-    ignore_list.extend([(x.artist, x.title) for x in played[-replay_song_cooldown:]])
+    ignore_list.extend(
+        [(x.track.artist, x.track.title) for x in played[-replay_song_cooldown:]]
+    )
     logger.debug(f"ignoring {ignore_list}")
 
-    tracks = db.query_similar(new_features, n_results=45, ignore_songs=ignore_list)
+    tracks = db.query_similar(new_embeddings, n_results=45, ignore_songs=ignore_list)
 
     # resort these, and slightly downvote recent artists
-    recent_artists = [x.artist for x in played[-15:]]
+    recent_artists = [x.track.artist for x in played[-15:]]
 
     def update_similarity(t):
         replay_artist_downrank = station_options.replay_artist_downrank
@@ -213,7 +214,6 @@ async def get_stations(request):
 @routes.post("/api/stations")
 async def make_station(request):
     try:
-        vec_db = request.app["vec_db"]
         station_db = request.app["station_db"]
         user = request["user"]
         sub_conn = request.app["sub_conn"]
@@ -231,7 +231,7 @@ async def make_station(request):
         except ValidationError as e:
             return web.json_response({"error": e.errors()}, status=400)
 
-        track = vec_db.get_track(params.song_id)
+        track = station_db.get_track_by_subsonic_id(params.song_id)
         if not track:
             return web.json_response({"error": "Invalid `song_id`"}, status=400)
 
@@ -244,34 +244,20 @@ async def make_station(request):
             params.ignore_live,
         )
 
-        track_features = boldaric.feature_helper.features_to_list(track["features"])
+        station_db.add_track_to_or_update_history(station_id, track, False, SEED_RATING)
 
-        # Add this as seed data with a thumbs up rating
-        track_history_id = station_db.add_track_to_or_update_history(
-            station_id,
-            track["metadata"]["subsonic_id"],
-            track["metadata"]["artist"],
-            track["metadata"]["title"],
-            track["metadata"]["album"],
-            False,
-        )
-
-        station_db.add_embedding_history(
-            station_id, track_history_id, track_features, SEED_RATING
-        )
-
-        stream_url = boldaric.subsonic.make_stream_link(sub_conn, track)
-        cover_url = boldaric.subsonic.make_album_art_link(sub_conn, track)
+        stream_url = boldaric.subsonic.make_stream_link(sub_conn, track.subsonic_id)
+        cover_url = boldaric.subsonic.make_album_art_link(sub_conn, track.subsonic_id)
 
         return web.json_response(
             {
                 "station": {"id": station_id, "name": params.station_name},
                 "track": {
                     "url": stream_url,
-                    "song_id": track["metadata"]["subsonic_id"],
-                    "artist": track["metadata"]["artist"],
-                    "title": track["metadata"]["title"],
-                    "album": track["metadata"]["album"],
+                    "song_id": track.subsonic_id,
+                    "artist": track.artist,
+                    "title": track.title,
+                    "album": track.album,
                     "cover_url": cover_url,
                 },
             }
@@ -294,13 +280,7 @@ async def get_next_song_for_station(request):
         station_id = request.match_info["station_id"]
 
         # make our history...
-        history = boldaric.simulator.make_history()
-        embeddings = station_db.get_embedding_history(station_id)
-
-        for embedding in embeddings:
-            history = boldaric.simulator.add_history(
-                history, embedding.embedding, embedding.rating
-            )
+        history = station_db.get_embedding_history(station_id)
 
         station_options: StationOptions = station_db.get_station_options(station_id)
 
@@ -342,15 +322,22 @@ async def get_next_song_for_station(request):
         if len(top_tracks) > 0:
 
             def make_response(t):
-                stream_url = boldaric.subsonic.make_stream_link(sub_conn, t)
-                cover_url = boldaric.subsonic.make_album_art_link(sub_conn, t)
+                track = station_db.get_track_by_subsonic_id(
+                    t["metadata"]["subsonic_id"]
+                )
+                stream_url = boldaric.subsonic.make_stream_link(
+                    sub_conn, track.subsonic_id
+                )
+                cover_url = boldaric.subsonic.make_album_art_link(
+                    sub_conn, track.subsonic_id
+                )
 
                 return {
                     "url": stream_url,
-                    "song_id": t["metadata"]["subsonic_id"],
-                    "artist": t["metadata"]["artist"],
-                    "title": t["metadata"]["title"],
-                    "album": t["metadata"]["album"],
+                    "song_id": track.subsonic_id,
+                    "artist": track.artist,
+                    "title": track.title,
+                    "album": track.album,
                     "cover_url": cover_url,
                 }
 
@@ -448,25 +435,15 @@ async def add_seed(request):
     try:
         data = await request.json()
 
-        vec_db = request.app["vec_db"]
         station_db = request.app["station_db"]
 
         station_id = request.match_info["station_id"]
         song_id = data["song_id"].strip()
 
-        track = vec_db.get_track(song_id)
-        feature_list = boldaric.feature_helper.features_to_list(track["features"])
+        track = station_db.get_track_by_subsonic_id(song_id)
 
         track_history_id = station_db.add_track_to_or_update_history(
-            station_id,
-            track["metadata"]["subsonic_id"],
-            track["metadata"]["artist"],
-            track["metadata"]["title"],
-            track["metadata"]["album"],
-            False,
-        )
-        station_db.add_embedding_history(
-            station_id, track_history_id, feature_list, SEED_RATING
+            station_id, track, False, SEED_RATING
         )
 
         return web.json_response({"success": True})
@@ -479,25 +456,14 @@ async def add_seed(request):
 @routes.put("/api/station/{station_id}/{song_id}")
 async def add_song_to_history(request):
     try:
-        vec_db = request.app["vec_db"]
         station_db = request.app["station_db"]
 
         station_id = request.match_info["station_id"]
         song_id = request.match_info["song_id"]
 
-        track = vec_db.get_track(song_id)
-        feature_list = boldaric.feature_helper.features_to_list(track["features"])
-
+        track = station_db.get_track_by_subsonic_id(song_id)
         track_history_id = station_db.add_track_to_or_update_history(
-            station_id,
-            track["metadata"]["subsonic_id"],
-            track["metadata"]["artist"],
-            track["metadata"]["title"],
-            track["metadata"]["album"],
-            False,
-        )
-        station_db.add_embedding_history(
-            station_id, track_history_id, feature_list, DEFAULT_RATING
+            station_id, track, False, DEFAULT_RATING
         )
 
         return web.json_response({"success": True})
@@ -512,25 +478,14 @@ async def add_song_to_history(request):
 @routes.post("/api/station/{station_id}/{song_id}/thumbs_up")
 async def thumbs_up(request):
     try:
-        vec_db = request.app["vec_db"]
         station_db = request.app["station_db"]
 
         station_id = request.match_info["station_id"]
         song_id = request.match_info["song_id"]
 
-        track = vec_db.get_track(song_id)
-        feature_list = boldaric.feature_helper.features_to_list(track["features"])
-
+        track = station_db.get_track_by_subsonic_id(song_id)
         track_history_id = station_db.add_track_to_or_update_history(
-            station_id,
-            track["metadata"]["subsonic_id"],
-            track["metadata"]["artist"],
-            track["metadata"]["title"],
-            track["metadata"]["album"],
-            False,
-        )
-        station_db.add_embedding_history(
-            station_id, track_history_id, feature_list, THUMBS_UP_RATING
+            station_id, track, False, THUMBS_UP_RATING
         )
 
         return web.json_response({"success": True})
@@ -543,25 +498,14 @@ async def thumbs_up(request):
 @routes.post("/api/station/{station_id}/{song_id}/thumbs_down")
 async def thumbs_down(request):
     try:
-        vec_db = request.app["vec_db"]
         station_db = request.app["station_db"]
 
         station_id = request.match_info["station_id"]
         song_id = request.match_info["song_id"]
 
-        track = vec_db.get_track(song_id)
-        feature_list = boldaric.feature_helper.features_to_list(track["features"])
-
+        track = station_db.get_track_by_subsonic_id(song_id)
         track_history_id = station_db.add_track_to_or_update_history(
-            station_id,
-            track["metadata"]["subsonic_id"],
-            track["metadata"]["artist"],
-            track["metadata"]["title"],
-            track["metadata"]["album"],
-            True,
-        )
-        station_db.add_embedding_history(
-            station_id, track_history_id, feature_list, THUMBS_DOWN_RATING
+            station_id, track, True, THUMBS_DOWN_RATING
         )
 
         return web.json_response({"success": True})

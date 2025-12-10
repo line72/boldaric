@@ -20,4 +20,3 @@ class Station(Base):
     # Relationships
     user = relationship("User", back_populates="stations")
     track_history = relationship("TrackHistory", back_populates="station")
-    embedding_history = relationship("EmbeddingHistory", back_populates="station")
