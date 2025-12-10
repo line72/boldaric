@@ -176,7 +176,7 @@ def process_song(song, conn, stationdb, vectordb):
                     stationdb.add_track(
                         artist=get_in(features, ["metadata", "artist"], ""),
                         album=get_in(features, ["metadata", "album"], ""),
-                        track=get_in(features, ["metadata", "title"], ""),
+                        title=get_in(features, ["metadata", "title"], ""),
                         track_number=get_in(features, ["metadata", "tracknumber"], 0),
                         genre=";".join(get_in(features, ["metadata", "genre"], [])),
                         subsonic_id=subsonic_id,
