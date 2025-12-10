@@ -26,7 +26,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer, primary_key=True),
         sa.Column("artist", sa.String),
         sa.Column("album", sa.String),
-        sa.Column("track", sa.String),
+        sa.Column("title", sa.String),
         sa.Column("track_number", sa.Integer),
         sa.Column("genre", sa.String),
         sa.Column("subsonic_id", sa.String, nullable=False),

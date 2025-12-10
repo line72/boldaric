@@ -76,7 +76,7 @@ class VectorDB:
             subsonic_id=subsonic_id,
             artist=track.artist,
             album=track.album,
-            title=track.track,
+            title=track.title,
         ).model_dump()
 
         self.collection.upsert(
@@ -97,19 +97,21 @@ class VectorDB:
 
     def get_all_tracks(self) -> list[dict]:
         """Get all tracks from the database"""
-        results = self.collection.get(
-            include=["embeddings", "metadatas"]
-        )
-        
+        results = self.collection.get(include=["embeddings", "metadatas"])
+
         # Process results into a list of dictionaries
         tracks = []
         for i in range(len(results["ids"])):
-            tracks.append({
-                "id": results["ids"][i],
-                "metadata": results["metadatas"][i],
-                "embedding": results["embeddings"][i] if "embeddings" in results else None
-            })
-        
+            tracks.append(
+                {
+                    "id": results["ids"][i],
+                    "metadata": results["metadatas"][i],
+                    "embedding": (
+                        results["embeddings"][i] if "embeddings" in results else None
+                    ),
+                }
+            )
+
         return tracks
 
     def delete_track(self, subsonic_id: str) -> None:

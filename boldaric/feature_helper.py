@@ -61,6 +61,7 @@ def track_to_embeddings(track: Track) -> list[float]:
 
     return embedding
 
+
 ##
 # Convert a track to embeddings with the old (default) normalization
 #  of each embedding. This generally works well.

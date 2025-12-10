@@ -81,10 +81,12 @@ def get_next_songs(
     # query similar
     ignore_list = []
     # ignore ALL thumbs downed
-    ignore_list.extend([(x.track.artist, x.track.track) for x in thumbs_downed])
+    ignore_list.extend([(x.track.artist, x.track.title) for x in thumbs_downed])
     # ignore last X played
     replay_song_cooldown = station_options.replay_song_cooldown
-    ignore_list.extend([(x.track.artist, x.track.track) for x in played[-replay_song_cooldown:]])
+    ignore_list.extend(
+        [(x.track.artist, x.track.title) for x in played[-replay_song_cooldown:]]
+    )
     logger.debug(f"ignoring {ignore_list}")
 
     tracks = db.query_similar(new_embeddings, n_results=45, ignore_songs=ignore_list)
@@ -254,7 +256,7 @@ async def make_station(request):
                     "url": stream_url,
                     "song_id": track.subsonic_id,
                     "artist": track.artist,
-                    "title": track.track,
+                    "title": track.title,
                     "album": track.album,
                     "cover_url": cover_url,
                 },
@@ -334,7 +336,7 @@ async def get_next_song_for_station(request):
                     "url": stream_url,
                     "song_id": track.subsonic_id,
                     "artist": track.artist,
-                    "title": track.track,
+                    "title": track.title,
                     "album": track.album,
                     "cover_url": cover_url,
                 }

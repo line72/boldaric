@@ -32,37 +32,50 @@ SAMPLE_FEATURES = {
     "genre_embeddings": np.random.rand(128).tolist(),
     "mfcc": {"mean": [0.1] * 13},
     "groove": {"danceability": 0.7, "tempo_stability": 0.8},
-    "mood": {"probabilities": {"aggressive": 0.2, "happy": 0.6, "relaxed": 0.1, "sad": 0.1, "party": 0.1}},
+    "mood": {
+        "probabilities": {
+            "aggressive": 0.2,
+            "happy": 0.6,
+            "relaxed": 0.1,
+            "sad": 0.1,
+            "party": 0.1,
+        }
+    },
     "loudness": -10.5,
     "dynamic_complexity": 0.6,
     "vocal": {"has_vocals": True},
     "spectral_character": {"brightness": 0.7},
     "key": {"key": "C", "scale": "major"},
-    "genre": [{"name": "rock", "confidence": 0.8}, {"name": "alternative", "confidence": 0.7}],
+    "genre": [
+        {"name": "rock", "confidence": 0.8},
+        {"name": "alternative", "confidence": 0.7},
+    ],
 }
 
 SAMPLE_SUBSONIC_ID = "track-123"
 
+
 def make_track(features):
     return Track(
-        artist = 'Test Artist',
-        album = 'Test Album',
-        track = 'Test Track',
-        genre_embedding = np.array(features['genre_embeddings']).tobytes(),
-        mfcc_mean = np.array(features['mfcc']['mean']).tobytes(),
-        groove_danceability = features['groove']['danceability'],
-        groove_tempo_stability = features['groove']['tempo_stability'],
-        mood_aggressiveness = features['mood']['probabilities']['aggressive'],
-        mood_happiness = features['mood']['probabilities']['happy'],
-        mood_partiness = features['mood']['probabilities']['party'],
-        mood_relaxedness = features['mood']['probabilities']['relaxed'],
-        mood_sadness = features['mood']['probabilities']['sad'],
-        loudness = features['loudness'],
-        dynamic_complexity = features['dynamic_complexity'],
-        spectral_character_brightness = features['spectral_character']['brightness'],
-        key_tonic = features['key']['key'],
-        key_scale = features['key']['scale']
+        artist="Test Artist",
+        album="Test Album",
+        title="Test Track",
+        genre_embedding=np.array(features["genre_embeddings"]).tobytes(),
+        mfcc_mean=np.array(features["mfcc"]["mean"]).tobytes(),
+        groove_danceability=features["groove"]["danceability"],
+        groove_tempo_stability=features["groove"]["tempo_stability"],
+        mood_aggressiveness=features["mood"]["probabilities"]["aggressive"],
+        mood_happiness=features["mood"]["probabilities"]["happy"],
+        mood_partiness=features["mood"]["probabilities"]["party"],
+        mood_relaxedness=features["mood"]["probabilities"]["relaxed"],
+        mood_sadness=features["mood"]["probabilities"]["sad"],
+        loudness=features["loudness"],
+        dynamic_complexity=features["dynamic_complexity"],
+        spectral_character_brightness=features["spectral_character"]["brightness"],
+        key_tonic=features["key"]["key"],
+        key_scale=features["key"]["scale"],
     )
+
 
 @pytest.fixture
 def temp_db():
@@ -100,8 +113,12 @@ def test_query_similar(temp_db):
 
     # Add a similar track
     similar_features = copy.deepcopy(SAMPLE_FEATURES)
-    similar_features["genre_embeddings"] = (np.array(SAMPLE_FEATURES["genre_embeddings"]) + np.random.normal(0, 0.01, 128)).tolist()
-    similar_features["mfcc"]["mean"] = [x + 0.01 for x in SAMPLE_FEATURES["mfcc"]["mean"]]
+    similar_features["genre_embeddings"] = (
+        np.array(SAMPLE_FEATURES["genre_embeddings"]) + np.random.normal(0, 0.01, 128)
+    ).tolist()
+    similar_features["mfcc"]["mean"] = [
+        x + 0.01 for x in SAMPLE_FEATURES["mfcc"]["mean"]
+    ]
     similar_features["groove"]["danceability"] += 0.01
     similar_features["groove"]["tempo_stability"] += 0.01
     similar_features["mood"]["probabilities"]["happy"] += 0.01
@@ -122,10 +139,11 @@ def test_query_similar(temp_db):
 
     features = track_to_embeddings(t)
     results = temp_db.query_similar(features, n_results=2)
-    
+
     assert len(results) == 2
-    
+
     assert results[0]["id"] == SAMPLE_SUBSONIC_ID
     assert results[1]["id"] == "similar-track"
-    assert results[0]["similarity"] > results[1]["similarity"], "Results should be ordered by similarity"
-
+    assert (
+        results[0]["similarity"] > results[1]["similarity"]
+    ), "Results should be ordered by similarity"

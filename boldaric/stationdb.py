@@ -263,7 +263,9 @@ class StationDB:
             history = simulator.make_history()
             for history_item in track_histories:
                 # Get the embedding for this track
-                embedding = feature_helper.track_to_embeddings_default_normalization(history_item.track)
+                embedding = feature_helper.track_to_embeddings_default_normalization(
+                    history_item.track
+                )
                 # Check that embedding has the right dimension (148)
                 if len(embedding) == 148:
                     history = simulator.add_history(
@@ -283,7 +285,9 @@ class StationDB:
         history = simulator.make_history()
         for track_history in tracks:
             # Get the embedding for this track
-            embedding = feature_helper.track_to_embeddings_default_normalization(track_history.track)
+            embedding = feature_helper.track_to_embeddings_default_normalization(
+                track_history.track
+            )
             # Check that embedding has the right dimension (148)
             if len(embedding) == 148:
                 history = simulator.add_history(
@@ -315,7 +319,7 @@ class StationDB:
         self,
         artist: str,
         album: str,
-        track: str,
+        title: str,
         track_number: int,
         genre: str,
         subsonic_id: str,
@@ -382,7 +386,7 @@ class StationDB:
             track_record = Track(
                 artist=artist,
                 album=album,
-                track=track,
+                title=title,
                 track_number=track_number,
                 genre=genre,
                 subsonic_id=subsonic_id,
@@ -462,7 +466,7 @@ class StationDB:
             session.commit()
 
             return track
-        
+
     def get_track_by_subsonic_id(self, subsonic_id: str) -> Track | None:
         """Get a track based on subsonic id"""
         with self.Session() as session:
