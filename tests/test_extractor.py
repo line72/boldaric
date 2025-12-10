@@ -418,22 +418,22 @@ EXPECTED_EXTRACTION = {
     },
 }
 
-def assert_approx_equal(actual, expected, tolerance=1e-6):
+def assert_approx_equal(actual, expected, tolerance=1e-6, key = ''):
     """Recursively compare values, using approx for floats and == for others"""
     if isinstance(expected, dict):
         assert isinstance(actual, dict), f"Expected dict, got {type(actual)}"
         assert set(actual.keys()) == set(expected.keys()), f"Key mismatch: {set(actual.keys())} vs {set(expected.keys())}"
         for key in expected:
-            assert_approx_equal(actual[key], expected[key], tolerance)
+            assert_approx_equal(actual[key], expected[key], tolerance, key)
     elif isinstance(expected, list):
         assert isinstance(actual, list), f"Expected list, got {type(actual)}"
         assert len(actual) == len(expected), f"List length mismatch: {len(actual)} vs {len(expected)}"
         for i, (act, exp) in enumerate(zip(actual, expected)):
             assert_approx_equal(act, exp, tolerance)
     elif isinstance(expected, float):
-        assert actual == pytest.approx(expected, abs=tolerance), f"Float mismatch: {actual} != {expected}"
+        assert actual == pytest.approx(expected, abs=tolerance), f"Float mismatch for {key}: {actual} != {expected}"
     else:
-        assert actual == expected, f"Value mismatch: {actual} != {expected}"
+        assert actual == expected, f"Value mismatch for {key}: {actual} != {expected}"
 
 
 @pytest.fixture
