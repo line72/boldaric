@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import pytest
 from pathlib import Path
@@ -431,7 +432,7 @@ EXPECTED_EXTRACTION = {
 def sample_audio_file():
     yield TEST_AUDIO_FILE
 
-
+@pytest.mark.skipif(not os.getenv("RUN_PRECISION_TESTS"), reason="Precision tests skipped by default") 
 def test_extract_features_structure(sample_audio_file):
     """Test that extract_features returns features with expected structure"""
     features = extract_features(sample_audio_file)

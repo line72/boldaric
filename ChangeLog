@@ -1,3 +1,6 @@
+2025-12-10  Marcus Dillavou  <line72@line72.net>
+	* BOL-29 - Add github actions
+
 2025-10-28  Marcus Dillavou  <line72@line72.net>
 	* BOL-23 - Switch to SQLAlchemy
 

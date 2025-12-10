@@ -32,7 +32,7 @@ boldaric-extractor = "boldaric.subsonic_worker:main"
 
 [project.optional-dependencies]
 test = ["pytest==8.3.5"]
-dev = ["flake8~=7.2.0", "flake8-black~=0.3.6", "pylint~=3.3.7", "black~=25.1.0", "mypy~=1.18.2"] 
+dev = ["flake8~=7.2.0", "flake8-black~=0.3.6", "pylint~=3.3.7", "black~=25.1.0", "mypy~=1.18.2", "pytest==8.3.5"] 
 
 [project.urls]
 Homepage = "https://github.com/line72/boldaric"
