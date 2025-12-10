@@ -84,7 +84,9 @@ def get_next_songs(
     ignore_list.extend([(x.track.artist, x.track.track) for x in thumbs_downed])
     # ignore last X played
     replay_song_cooldown = station_options.replay_song_cooldown
-    ignore_list.extend([(x.track.artist, x.track.track) for x in played[-replay_song_cooldown:]])
+    ignore_list.extend(
+        [(x.track.artist, x.track.track) for x in played[-replay_song_cooldown:]]
+    )
     logger.debug(f"ignoring {ignore_list}")
 
     tracks = db.query_similar(new_embeddings, n_results=45, ignore_songs=ignore_list)

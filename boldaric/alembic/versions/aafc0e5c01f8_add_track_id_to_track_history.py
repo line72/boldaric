@@ -24,15 +24,15 @@ def upgrade() -> None:
     with op.batch_alter_table("track_history") as batch_op:
         # Add track_id column as nullable first
         batch_op.add_column(sa.Column("track_id", sa.Integer(), nullable=True))
-        batch_op.create_foreign_key("fk_track_history_tracks", "tracks", ["track_id"], ["id"])
-
-        # Add rating column to track_history
-        batch_op.add_column(
-            sa.Column("rating", sa.Integer(), nullable=True, default=0)
+        batch_op.create_foreign_key(
+            "fk_track_history_tracks", "tracks", ["track_id"], ["id"]
         )
 
+        # Add rating column to track_history
+        batch_op.add_column(sa.Column("rating", sa.Integer(), nullable=True, default=0))
+
         batch_op.drop_index("idx_unique_station_subsonic")
-        
+
         # Drop redundant columns
         batch_op.drop_column("artist")
         batch_op.drop_column("title")
@@ -44,12 +44,16 @@ def downgrade() -> None:
     # Use batch mode for SQLite compatibility
     with op.batch_alter_table("track_history") as batch_op:
         # Re-add dropped columns
+        batch_op.add_column(sa.Column("subsonic_id", sa.VARCHAR(), nullable=False))
         batch_op.add_column(
-            sa.Column("subsonic_id", sa.VARCHAR(), nullable=False)
+            "track_history", sa.Column("album", sa.VARCHAR(), nullable=False)
         )
-        batch_op.add_column("track_history", sa.Column("album", sa.VARCHAR(), nullable=False))
-        batch_op.add_column("track_history", sa.Column("title", sa.VARCHAR(), nullable=False))
-        batch_op.add_column("track_history", sa.Column("artist", sa.VARCHAR(), nullable=False))
+        batch_op.add_column(
+            "track_history", sa.Column("title", sa.VARCHAR(), nullable=False)
+        )
+        batch_op.add_column(
+            "track_history", sa.Column("artist", sa.VARCHAR(), nullable=False)
+        )
 
         # Remove rating column from track_history
         batch_op.drop_column("rating")

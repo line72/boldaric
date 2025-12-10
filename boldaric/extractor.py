@@ -99,7 +99,7 @@ def sigmoid(x):
     return 1 / (1 + np.exp(-x))
 
 
-def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
+def extract_metadata(file_path, audio_file=None, audio_44_1k=None):
     """Extract metadata from audio file."""
     if audio_file is None:
         audio_file = File(file_path)
@@ -109,12 +109,12 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
         # disable logging in all the dumb possible ways
         essentia.log.infoActive = False
         essentia.log.warningActive = False
-        
+
         import essentia.standard as es
 
         loader_44_1k = es.MonoLoader(filename=file_path, sampleRate=44100)
         audio_44_1k = loader_44_1k()
-    
+
     tags = {
         "path": os.path.abspath(file_path),
         "artist": "",
@@ -131,7 +131,7 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
         "releasetype": "album",
         "releasestatus": "official",
         "duration": 0,
-        "audio_length": 0
+        "audio_length": 0,
     }
 
     # Common tag fields across formats
@@ -148,7 +148,10 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
             "MUSICBRAINZ_RELEASETRACKID",
         ],
         "musicbrainz_artistid": ["TXXX:MUSICBRAINZ_ARTISTID", "MUSICBRAINZ_ARTISTID"],
-        "musicbrainz_releasegroupid": ["TXXX:MUSICBRAINZ_RELEASEGROUPID", "MUSICBRAINZ_RELEASEGROUPID"],
+        "musicbrainz_releasegroupid": [
+            "TXXX:MUSICBRAINZ_RELEASEGROUPID",
+            "MUSICBRAINZ_RELEASEGROUPID",
+        ],
         "musicbrainz_workid": ["TXXX:MUSICBRAINZ_WORKID", "MUSICBRAINZ_WORKID"],
         "tracknumber": ["TRCK", "trkn", "TRACKNUMBER", "TXXX:TRACKNUMBER"],
         "releasetype": [
@@ -156,12 +159,9 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
             "TXXX:RELEASETYPE",
             "RELEASETYPE",
             "TXXX:MUSICBRAINZ_ALBUMTYPE",
-            "MUSICBRAINZ_ALBUMTYPE"
+            "MUSICBRAINZ_ALBUMTYPE",
         ],
-        "releasestatus": [
-            "TXXX:RELEASESTATUS",
-            "RELEASESTATUS"
-        ]
+        "releasestatus": ["TXXX:RELEASESTATUS", "RELEASESTATUS"],
     }
 
     def convert_to_string(value):
@@ -175,12 +175,12 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
         # attempt at fixing this bullshit
         if isinstance(value, str) and value.startswith("b'"):
             try:
-                return ast.literal_eval(value).decode('utf-8')
+                return ast.literal_eval(value).decode("utf-8")
             except ValueError:
                 pass
-        
+
         return str(value)
-    
+
     if hasattr(audio_file, "tags"):
         for field, keys in tag_mapping.items():
             for key in keys:
@@ -193,7 +193,9 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
                                 tags[field] = [convert_to_string(x) for x in value]
                             else:
                                 tags[field] = [
-                                    g.strip() for g in convert_to_string(value).split(";") if g.strip()
+                                    g.strip()
+                                    for g in convert_to_string(value).split(";")
+                                    if g.strip()
                                 ]
                         elif field == "rating":
                             # Normalize rating values from different formats
@@ -212,7 +214,7 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
                             try:
                                 if isinstance(value, list):
                                     value = value[0]
-                                
+
                                 # Handle formats like "1/10" or just "1"
                                 if isinstance(value, TRCK):
                                     tags[field] = int(value.text[0])
@@ -225,14 +227,18 @@ def extract_metadata(file_path, audio_file = None, audio_44_1k = None):
                                     tags[field] = int(value)
                             except (ValueError, TypeError):
                                 tags[field] = 0
-                        elif field == "musicbrainz_releasetrackid" and hasattr(value, "data"):
+                        elif field == "musicbrainz_releasetrackid" and hasattr(
+                            value, "data"
+                        ):
                             # Handle MusicBrainz ReleaseTrackID UFID format
                             # Extract binary data and decode, removing null bytes
                             tags[field] = convert_to_string(value.data)
                         else:
                             # Properly handle binary data by checking type first
                             if isinstance(value, list):
-                                tags[field] = '/'.join([convert_to_string(x) for x in value])
+                                tags[field] = "/".join(
+                                    [convert_to_string(x) for x in value]
+                                )
                             else:
                                 tags[field] = convert_to_string(value)
                         break

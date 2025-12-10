@@ -155,16 +155,16 @@ def process_song(song, conn, stationdb, vectordb):
                     # re-extract JUST the metadata. We assume
                     #  the content hasn't changed
                     metadata = boldaric.extractor.extract_metadata(temp_file.name)
-                    track.artist = metadata['artist']
-                    track.album = metadata['album']
-                    track.track = metadata['title']
-                    track.track_number = metadata['tracknumber']
-                    track.genre = ';'.join(metadata['genre'])
-                    track.musicbrainz_artistid = metadata['musicbrainz_artistid']
-                    track.musicbrainz_albumid = metadata['musicbrainz_releasegroupid']
-                    track.musicbrainz_trackid = metadata['musicbrainz_releasetrackid']
-                    track.releasetype = metadata['releasetype']
-                    track.releasestatus = metadata['releasestatus']
+                    track.artist = metadata["artist"]
+                    track.album = metadata["album"]
+                    track.track = metadata["title"]
+                    track.track_number = metadata["tracknumber"]
+                    track.genre = ";".join(metadata["genre"])
+                    track.musicbrainz_artistid = metadata["musicbrainz_artistid"]
+                    track.musicbrainz_albumid = metadata["musicbrainz_releasegroupid"]
+                    track.musicbrainz_trackid = metadata["musicbrainz_releasetrackid"]
+                    track.releasetype = metadata["releasetype"]
+                    track.releasestatus = metadata["releasestatus"]
 
                     stationdb.update_track(track)
 
@@ -190,7 +190,9 @@ def process_song(song, conn, stationdb, vectordb):
                             features, ["metadata", "musicbrainz_releasetrackid"], ""
                         ),
                         releasetype=get_in(features, ["metadata", "releasetype"], ""),
-                        releasestatus=get_in(features, ["metadata", "releasestatus"], ""),
+                        releasestatus=get_in(
+                            features, ["metadata", "releasestatus"], ""
+                        ),
                         genre_list=get_in(features, ["genre"], []),
                         genre_embedding=get_in(features, ["genre_embeddings"], []),
                         mfcc_covariance=get_in(features, ["mfcc", "covariance"], []),
@@ -200,8 +202,12 @@ def process_song(song, conn, stationdb, vectordb):
                         ),
                         bpm=get_in(features, ["bpm"], 0.0),
                         loudness=get_in(features, ["loudness"], 0.0),
-                        dynamic_complexity=get_in(features, ["dynamic_complexity"], 0.0),
-                        energy_curve_mean=get_in(features, ["energy_curve", "mean"], 0.0),
+                        dynamic_complexity=get_in(
+                            features, ["dynamic_complexity"], 0.0
+                        ),
+                        energy_curve_mean=get_in(
+                            features, ["energy_curve", "mean"], 0.0
+                        ),
                         energy_curve_std=get_in(features, ["energy_curve", "std"], 0.0),
                         energy_curve_peak_count=get_in(
                             features, ["energy_curve", "peak_count"], 0
@@ -231,7 +237,9 @@ def process_song(song, conn, stationdb, vectordb):
                             features, ["groove", "danceability"], 0.0
                         ),
                         groove_dnc_bpm=get_in(features, ["groove", "dnc_bpm"], 0.0),
-                        groove_syncopation=get_in(features, ["groove", "syncopation"], 0.0),
+                        groove_syncopation=get_in(
+                            features, ["groove", "syncopation"], 0.0
+                        ),
                         groove_tempo_stability=get_in(
                             features, ["groove", "tempo_stability"], 0.0
                         ),
@@ -310,11 +318,12 @@ def cleanup_invalid_tracks(stationdb):
 
     ids_to_delete = []
     for track in vectordb.get_all_tracks():
-        if not stationdb.get_track_by_subsonic_id(track['id']):
-            ids_to_delete.append(track['id'])
+        if not stationdb.get_track_by_subsonic_id(track["id"]):
+            ids_to_delete.append(track["id"])
 
     vectordb.delete_tracks(ids_to_delete)
-                
+
+
 def latinize_text(text):
     # Convert to latin
     return unidecode(text)
