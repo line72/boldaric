@@ -7,7 +7,7 @@ from boldaric.extractor import extract_features, extract_metadata
 
 # Test audio file path - this should be a real audio file
 # To run tests, you'll need to provide a real audio file at this path
-TEST_AUDIO_FILE = "tests/test.mp3"
+TEST_AUDIO_FILE = os.path.join(os.path.abspath('.'), "tests", "test.mp3")
 
 EXPECTED_EXTRACTION = {
     "bpm": 135.63702392578125,
@@ -177,7 +177,7 @@ EXPECTED_EXTRACTION = {
         "musicbrainz_releasegroupid": "e0fb41f5-17b2-32e0-ad8c-de40f2a6ed4e",
         "musicbrainz_releasetrackid": "d37ab610-d96a-3fe8-aadc-8c593596a348",
         "musicbrainz_workid": "",
-        "path": "/home/dillavou/projects/boldaric/tests/test.mp3",
+        "path": TEST_AUDIO_FILE,
         "rating": 0.0,
         "title": "Imaginations From the Other Side",
         "tracknumber": 1,
