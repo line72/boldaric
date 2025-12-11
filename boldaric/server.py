@@ -61,6 +61,7 @@ class UpdateStationParams(BaseModel):
     replay_artist_downrank: float = Field(default=0.995)
     ignore_live: bool = Field(default=False)
 
+
 def get_next_songs(
     db,
     conn,
@@ -93,7 +94,9 @@ def get_next_songs(
 
     # resort these, and slightly downvote recent artists
     recent_artists = [x.track.artist for x in played[-15:]]
-    logger.debug(f"Downranking Recent artists ({station_options.replay_artist_downrank}): {recent_artists}")
+    logger.debug(
+        f"Downranking Recent artists ({station_options.replay_artist_downrank}): {recent_artists}"
+    )
 
     def update_similarity(t):
         replay_artist_downrank = station_options.replay_artist_downrank
@@ -347,7 +350,7 @@ async def get_next_song_for_station(request):
                 {"tracks": list(map(lambda t: make_response(t), top_tracks))}
             )
         else:
-            get_logger().debug('Unable to find any recommendations')
+            get_logger().debug("Unable to find any recommendations")
             return web.json_response({"error": "Unable to find next song"}, status=400)
     except Exception as e:
         logger = get_logger()
@@ -444,7 +447,7 @@ async def add_seed(request):
         song_id = data["song_id"].strip()
 
         track = station_db.get_track_by_subsonic_id(song_id)
-        get_logger().debug(f'Adding seed track: {track}')
+        get_logger().debug(f"Adding seed track: {track}")
 
         track_history_id = station_db.add_track_to_or_update_history(
             station_id, track, False, SEED_RATING
@@ -466,7 +469,7 @@ async def add_song_to_history(request):
         song_id = request.match_info["song_id"]
 
         track = station_db.get_track_by_subsonic_id(song_id)
-        get_logger().debug(f'Adding track history: {track}')
+        get_logger().debug(f"Adding track history: {track}")
         track_history_id = station_db.add_track_to_or_update_history(
             station_id, track, False, DEFAULT_RATING
         )
@@ -489,7 +492,7 @@ async def thumbs_up(request):
         song_id = request.match_info["song_id"]
 
         track = station_db.get_track_by_subsonic_id(song_id)
-        get_logger().debug(f'Thumbs up track: {track}')
+        get_logger().debug(f"Thumbs up track: {track}")
         track_history_id = station_db.add_track_to_or_update_history(
             station_id, track, False, THUMBS_UP_RATING
         )
@@ -510,7 +513,7 @@ async def thumbs_down(request):
         song_id = request.match_info["song_id"]
 
         track = station_db.get_track_by_subsonic_id(song_id)
-        get_logger().debug(f'Thumbs down track: {track}')
+        get_logger().debug(f"Thumbs down track: {track}")
         track_history_id = station_db.add_track_to_or_update_history(
             station_id, track, True, THUMBS_DOWN_RATING
         )
@@ -661,10 +664,10 @@ def main():
     logger = get_logger()
     logger.setLevel(log_level)
 
-    version = metadata.version('boldaric')
-    
-    logger.info('Starting boldaric version {version}')
-    
+    version = metadata.version("boldaric")
+
+    logger.info("Starting boldaric version {version}")
+
     # Handle database initialization
     if args.initialize_db:
         db_file = os.path.join(args.db_path, "stations.db")

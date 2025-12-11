@@ -5,6 +5,6 @@
 
 import logging
 
+
 def get_logger():
-    return logging.getLogger('boldaric')
-    
+    return logging.getLogger("boldaric")

@@ -20,6 +20,7 @@ from importlib.resources import files
 
 from . import labels
 
+
 def extract_features(file_path):
     """Extract features from an audio file."""
     # disable logging
