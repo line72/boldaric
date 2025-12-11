@@ -23,7 +23,7 @@ from . import feature_helper
 from .models.track import Track
 
 # Hard-coded to the number of dimension we extract
-DIMENSIONS = 148
+DIMENSIONS = 163
 
 
 class TrackMetadata(BaseModel):
@@ -35,11 +35,11 @@ class TrackMetadata(BaseModel):
 
 class VectorDB:
     def __init__(self, client: chromadb.ClientAPI):
-        collection_name = "audio_features"
+        self.collection_name = "audio_features"
 
         self.client = client
         self.collection = self.client.get_or_create_collection(
-            name=collection_name,
+            name=self.collection_name,
             metadata={"hnsw:space": "cosine", "dimension": DIMENSIONS},
         )
 
@@ -61,6 +61,14 @@ class VectorDB:
             settings=chromadb.Settings(anonymized_telemetry=False),
         )
         return VectorDB(client)
+
+    def delete_and_recreate_collection(self):
+        self.client.delete_collection(name=self.collection_name)
+        # recreate
+        self.collection = self.client.get_or_create_collection(
+            name=self.collection_name,
+            metadata={"hnsw:space": "cosine", "dimension": DIMENSIONS},
+        )
 
     def add_track(self, subsonic_id: str, track: Track):
         """Store a track's features"""

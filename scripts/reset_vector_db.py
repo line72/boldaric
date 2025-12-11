@@ -26,6 +26,9 @@ def go(stationdb, vectordb):
             total_count = session.query(func.count(boldaric.models.Track.id)).scalar()
             query = session.query(boldaric.models.Track).yield_per(1000)
 
+            # Delete the whole collection
+            vectordb.delete_and_recreate_collection()
+            
             task_id = progress.add_task('Re-Indexing', total=total_count)
                     
             for track in query:
