@@ -19,6 +19,7 @@ from .models.track import Track
 #  we'll update this
 VERSION = 2
 
+DIMENSIONS = 163
 
 def track_to_embeddings(track: Track) -> list[float]:
     """Convert the meteadata from a track into an embedding

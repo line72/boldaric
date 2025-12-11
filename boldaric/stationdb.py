@@ -267,8 +267,8 @@ class StationDB:
                 embedding = feature_helper.track_to_embeddings_default_normalization(
                     history_item.track
                 )
-                # Check that embedding has the right dimension (148)
-                if len(embedding) == 148:
+                # Check that embedding has the right dimension
+                if len(embedding) == feature_helper.DIMENSIONS:
                     history = simulator.add_history(
                         history, embedding, history_item.rating
                     )

@@ -22,10 +22,6 @@ from . import feature_helper
 
 from .models.track import Track
 
-# Hard-coded to the number of dimension we extract
-DIMENSIONS = 163
-
-
 class TrackMetadata(BaseModel):
     subsonic_id: str
     artist: str
@@ -40,7 +36,7 @@ class VectorDB:
         self.client = client
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name,
-            metadata={"hnsw:space": "cosine", "dimension": DIMENSIONS},
+            metadata={"hnsw:space": "cosine"},
         )
 
     @staticmethod
@@ -67,7 +63,7 @@ class VectorDB:
         # recreate
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name,
-            metadata={"hnsw:space": "cosine", "dimension": DIMENSIONS},
+            metadata={"hnsw:space": "cosine"},
         )
 
     def add_track(self, subsonic_id: str, track: Track):
