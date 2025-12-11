@@ -19,6 +19,7 @@ from . import simulator
 from . import feature_helper
 from .records.station_options import StationOptions
 
+import alembic
 from alembic import command
 from alembic.config import Config
 

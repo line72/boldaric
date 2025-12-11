@@ -32,6 +32,7 @@ import rich.progress
 
 import boldaric
 import boldaric.subsonic
+import boldaric.extractor
 
 
 def get_artist_from_name(conn, artist_name):

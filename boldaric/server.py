@@ -23,10 +23,11 @@ from pydantic import BaseModel, ValidationError, Field
 from typing import Optional
 
 from pathlib import Path
-from importlib import resources
+from importlib import resources, metadata
 
 import boldaric
 import boldaric.subsonic
+from boldaric.utils import get_logger
 from boldaric.records.station_options import StationOptions
 
 # Development mode path
@@ -60,7 +61,6 @@ class UpdateStationParams(BaseModel):
     replay_artist_downrank: float = Field(default=0.995)
     ignore_live: bool = Field(default=False)
 
-
 def get_next_songs(
     db,
     conn,
@@ -70,7 +70,7 @@ def get_next_songs(
     played: list[boldaric.models.track_history.TrackHistory],
     thumbs_downed: list[boldaric.models.track_history.TrackHistory],
 ) -> list[dict]:
-    logger = logging.getLogger(__name__)
+    logger = get_logger()
     logger.debug("get_next_song")
 
     # Both played and thumbs_downed are lists of TrackHistory models
@@ -87,12 +87,13 @@ def get_next_songs(
     ignore_list.extend(
         [(x.track.artist, x.track.title) for x in played[-replay_song_cooldown:]]
     )
-    logger.debug(f"ignoring {ignore_list}")
+    logger.debug(f"ignoring {station_options.replay_song_cooldown}: {ignore_list}")
 
     tracks = db.query_similar(new_embeddings, n_results=45, ignore_songs=ignore_list)
 
     # resort these, and slightly downvote recent artists
     recent_artists = [x.track.artist for x in played[-15:]]
+    logger.debug(f"Downranking Recent artists ({station_options.replay_artist_downrank}): {recent_artists}")
 
     def update_similarity(t):
         replay_artist_downrank = station_options.replay_artist_downrank
@@ -180,7 +181,7 @@ async def auth(request):
         else:
             return web.json_response({"error": "Unauthorized"}, status=401)
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = get_logger()
         logger.error(f"Error in auth: {str(e)}\n{traceback.format_exc()}")
         return web.json_response({"error": "Error processing request"}, status=500)
 
@@ -206,7 +207,7 @@ async def get_stations(request):
 
         return web.json_response(stations_dict)
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = get_logger()
         logger.error(f"Error in get_stations: {str(e)}\n{traceback.format_exc()}")
         return web.json_response({"error": "Error processing request"}, status=500)
 
@@ -263,7 +264,7 @@ async def make_station(request):
             }
         )
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = get_logger()
         logger.error(f"Error in make_station: {str(e)}\n{traceback.format_exc()}")
         return web.json_response({"error": "Error processing request"}, status=500)
 
@@ -341,13 +342,15 @@ async def get_next_song_for_station(request):
                     "cover_url": cover_url,
                 }
 
+            get_logger().debug(f"Next tracks: {top_tracks}")
             return web.json_response(
                 {"tracks": list(map(lambda t: make_response(t), top_tracks))}
             )
         else:
+            get_logger().debug('Unable to find any recommendations')
             return web.json_response({"error": "Unable to find next song"}, status=400)
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = get_logger()
         logger.error(
             f"Error in get_next_song_for_station: {str(e)}\n{traceback.format_exc()}"
         )
@@ -375,7 +378,7 @@ async def get_station_info(request):
         else:
             return web.json_response({"error": "Station not found"}, status=404)
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = get_logger()
         logger.error(f"Error in get_station_info: {str(e)}\n{traceback.format_exc()}")
         return web.json_response({"error": "Error processing request"}, status=500)
 
@@ -423,7 +426,7 @@ async def update_station_info(request):
         else:
             return web.json_response({"error": "Station not found"}, status=404)
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = get_logger()
         logger.error(
             f"Error in update_station_info: {str(e)}\n{traceback.format_exc()}"
         )
@@ -441,6 +444,7 @@ async def add_seed(request):
         song_id = data["song_id"].strip()
 
         track = station_db.get_track_by_subsonic_id(song_id)
+        get_logger().debug(f'Adding seed track: {track}')
 
         track_history_id = station_db.add_track_to_or_update_history(
             station_id, track, False, SEED_RATING
@@ -448,7 +452,7 @@ async def add_seed(request):
 
         return web.json_response({"success": True})
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = get_logger()
         logger.error(f"Error in add_seed: {str(e)}\n{traceback.format_exc()}")
         return web.json_response({"error": "Error processing request"}, status=500)
 
@@ -462,13 +466,14 @@ async def add_song_to_history(request):
         song_id = request.match_info["song_id"]
 
         track = station_db.get_track_by_subsonic_id(song_id)
+        get_logger().debug(f'Adding track history: {track}')
         track_history_id = station_db.add_track_to_or_update_history(
             station_id, track, False, DEFAULT_RATING
         )
 
         return web.json_response({"success": True})
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = get_logger()
         logger.error(
             f"Error in add_song_to_history: {str(e)}\n{traceback.format_exc()}"
         )
@@ -484,13 +489,14 @@ async def thumbs_up(request):
         song_id = request.match_info["song_id"]
 
         track = station_db.get_track_by_subsonic_id(song_id)
+        get_logger().debug(f'Thumbs up track: {track}')
         track_history_id = station_db.add_track_to_or_update_history(
             station_id, track, False, THUMBS_UP_RATING
         )
 
         return web.json_response({"success": True})
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = get_logger()
         logger.error(f"Error in thumbs_up: {str(e)}\n{traceback.format_exc()}")
         return web.json_response({"error": "Error processing request"}, status=500)
 
@@ -504,13 +510,14 @@ async def thumbs_down(request):
         song_id = request.match_info["song_id"]
 
         track = station_db.get_track_by_subsonic_id(song_id)
+        get_logger().debug(f'Thumbs down track: {track}')
         track_history_id = station_db.add_track_to_or_update_history(
             station_id, track, True, THUMBS_DOWN_RATING
         )
 
         return web.json_response({"success": True})
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = get_logger()
         logger.error(f"Error in thumbs_down: {str(e)}\n{traceback.format_exc()}")
         return web.json_response({"error": "Error processing request"}, status=500)
 
@@ -526,7 +533,7 @@ async def search(request):
 
         return web.json_response(results)
     except Exception as e:
-        logger = logging.getLogger(__name__)
+        logger = get_logger()
         logger.error(f"Error in search: {str(e)}\n{traceback.format_exc()}")
         return web.json_response({"error": "Error processing request"}, status=500)
 
@@ -552,7 +559,7 @@ def initialize_database(db_path):
         )  # Fix for Alembic warning
         alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
         command.stamp(alembic_cfg, "initial")
-        print(f"Existing database at {db_path} stamped for migrations")
+        get_logger.info(f"Existing database at {db_path} stamped for migrations")
     else:
         # Database doesn't exist, create it and run migrations
         # Create database file
@@ -567,7 +574,7 @@ def initialize_database(db_path):
         )  # Fix for Alembic warning
         alembic_cfg.set_main_option("sqlalchemy.url", f"sqlite:///{db_path}")
         command.upgrade(alembic_cfg, "head")
-        print(f"New database created at {db_path} with migrations applied")
+        get_logger.info(f"New database created at {db_path} with migrations applied")
 
 
 async def go(db_path, port):
@@ -651,7 +658,13 @@ def main():
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         handlers=[logging.StreamHandler()],  # Console output
     )
+    logger = get_logger()
+    logger.setLevel(log_level)
 
+    version = metadata.version('boldaric')
+    
+    logger.info('Starting boldaric version {version}')
+    
     # Handle database initialization
     if args.initialize_db:
         db_file = os.path.join(args.db_path, "stations.db")
