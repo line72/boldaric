@@ -431,8 +431,7 @@ def main():
     parser.add_argument(
         "-s",
         "--skip-extraction",
-        type=bool,
-        default=False,
+        action="store_true",
         help="Skip re-extraction of metadata"
     )
     args = parser.parse_args()
@@ -454,7 +453,7 @@ def main():
     workers = []
     for _ in range(args.workers):
         p = multiprocessing.Process(
-            target=worker, args=(db_name, song_queue, progress_queue, parser.skip_extraction)
+            target=worker, args=(db_name, song_queue, progress_queue, args.skip_extraction)
         )
         p.start()
         workers.append(p)
