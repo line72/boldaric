@@ -163,8 +163,12 @@ def process_song(song, conn, stationdb, vectordb, skip_extraction):
                         track.track_number = metadata["tracknumber"]
                         track.genre = ";".join(metadata["genre"])
                         track.musicbrainz_artistid = metadata["musicbrainz_artistid"]
-                        track.musicbrainz_albumid = metadata["musicbrainz_releasegroupid"]
-                        track.musicbrainz_trackid = metadata["musicbrainz_releasetrackid"]
+                        track.musicbrainz_albumid = metadata[
+                            "musicbrainz_releasegroupid"
+                        ]
+                        track.musicbrainz_trackid = metadata[
+                            "musicbrainz_releasetrackid"
+                        ]
                         track.releasetype = metadata["releasetype"]
                         track.releasestatus = metadata["releasestatus"]
 
@@ -432,7 +436,7 @@ def main():
         "-s",
         "--skip-extraction",
         action="store_true",
-        help="Skip re-extraction of metadata"
+        help="Skip re-extraction of metadata",
     )
     args = parser.parse_args()
 
@@ -453,7 +457,8 @@ def main():
     workers = []
     for _ in range(args.workers):
         p = multiprocessing.Process(
-            target=worker, args=(db_name, song_queue, progress_queue, args.skip_extraction)
+            target=worker,
+            args=(db_name, song_queue, progress_queue, args.skip_extraction),
         )
         p.start()
         workers.append(p)
