@@ -139,7 +139,7 @@ def add_to_vector_db(vectordb, subsonic_id, track):
         vectordb.add_track(subsonic_id, track)
 
 
-def process_song(song, conn, stationdb, vectordb):
+def process_song(song, conn, stationdb, vectordb, skip_extraction):
     try:
         with stationdb.Session() as session:
             # Check if song is in vectordb database by subsonic id
@@ -153,23 +153,24 @@ def process_song(song, conn, stationdb, vectordb):
                 temp_file.flush()
 
                 if track:
-                    # re-extract JUST the metadata. We assume
-                    #  the content hasn't changed
-                    metadata = boldaric.extractor.extract_metadata(temp_file.name)
-                    track.artist = metadata["artist"]
-                    track.album = metadata["album"]
-                    track.title = metadata["title"]
-                    track.track_number = metadata["tracknumber"]
-                    track.genre = ";".join(metadata["genre"])
-                    track.musicbrainz_artistid = metadata["musicbrainz_artistid"]
-                    track.musicbrainz_albumid = metadata["musicbrainz_releasegroupid"]
-                    track.musicbrainz_trackid = metadata["musicbrainz_releasetrackid"]
-                    track.releasetype = metadata["releasetype"]
-                    track.releasestatus = metadata["releasestatus"]
+                    if not skip_extraction:
+                        # re-extract JUST the metadata. We assume
+                        #  the content hasn't changed
+                        metadata = boldaric.extractor.extract_metadata(temp_file.name)
+                        track.artist = metadata["artist"]
+                        track.album = metadata["album"]
+                        track.title = metadata["title"]
+                        track.track_number = metadata["tracknumber"]
+                        track.genre = ";".join(metadata["genre"])
+                        track.musicbrainz_artistid = metadata["musicbrainz_artistid"]
+                        track.musicbrainz_albumid = metadata["musicbrainz_releasegroupid"]
+                        track.musicbrainz_trackid = metadata["musicbrainz_releasetrackid"]
+                        track.releasetype = metadata["releasetype"]
+                        track.releasestatus = metadata["releasestatus"]
 
-                    stationdb.update_track(track)
+                        stationdb.update_track(track)
 
-                    add_to_vector_db(vectordb, subsonic_id, track)
+                        add_to_vector_db(vectordb, subsonic_id, track)
 
                 else:
 
@@ -288,7 +289,7 @@ def process_song(song, conn, stationdb, vectordb):
         }
 
 
-def worker(db_name, song_queue, progress_queue):
+def worker(db_name, song_queue, progress_queue, skip_extraction):
     conn = boldaric.subsonic.make_from_parameters(
         os.getenv("NAVIDROME_URL"),
         os.getenv("NAVIDROME_USERNAME"),
@@ -303,7 +304,7 @@ def worker(db_name, song_queue, progress_queue):
             case None:
                 return
             case ("PROCESS", artist_id, song):
-                result = process_song(song, conn, stationdb, vectordb)
+                result = process_song(song, conn, stationdb, vectordb, skip_extraction)
 
                 # update the progress
                 progress_queue.put(("UPDATE", artist_id, 1))
@@ -427,6 +428,13 @@ def main():
         dest="db_path",
         help="Path to the station database",
     )
+    parser.add_argument(
+        "-s",
+        "--skip-extraction",
+        type=bool,
+        default=False,
+        help="Skip re-extraction of metadata"
+    )
     args = parser.parse_args()
 
     song_queue = multiprocessing.Queue(maxsize=100)
@@ -446,7 +454,7 @@ def main():
     workers = []
     for _ in range(args.workers):
         p = multiprocessing.Process(
-            target=worker, args=(db_name, song_queue, progress_queue)
+            target=worker, args=(db_name, song_queue, progress_queue, parser.skip_extraction)
         )
         p.start()
         workers.append(p)
