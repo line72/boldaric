@@ -12,6 +12,7 @@ import numpy as np
 
 from boldaric.feature_helper import DIMENSIONS
 
+
 def make_history():
     # !mwd - I don't love how I am doing this
     #  But, we essentially have 148 dimensions:

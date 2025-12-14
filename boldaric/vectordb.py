@@ -22,6 +22,7 @@ from . import feature_helper
 
 from .models.track import Track
 
+
 class TrackMetadata(BaseModel):
     subsonic_id: str
     artist: str
