@@ -44,17 +44,19 @@ all_labels = \
         'spectral_character_valley_std'
     ]
 
-def print_results(result_list):
-    similarity = [x['similarity_score'] for x in result_list]
+def print_results(song1, song2, result_list):
+    print(f'Comparing {song1.artist} - {song1.title} vs {song2.artist} - {song2.title}')
+    
+    similarity = [f"{x['name']}={x['similarity_score']}" for x in result_list]
     print('Similarity', similarity)
 
     table = rich.table.Table()
     table.add_column('dimension')
 
-    for i in range(len(result_list)):
-        table.add_column(f'contribution {i+1}')
-    for i in range(len(result_list)):
-        table.add_column(f'difference {i+1}')
+    for i in result_list:
+        table.add_column(f'Contribution {i["name"]}')
+    for i in result_list:
+        table.add_column(f'Difference {i["name"]}')
 
     z = zip(all_labels,
             zip(*[x['dimension_contributions'] for x in result_list]),
@@ -103,7 +105,7 @@ def make_color_diff(v, min_v, max_v):
     else:
         return f'{v}'
     
-def compute_cosine_similarity_explanation(query_embedding, result_embedding):
+def compute_cosine_similarity_explanation(name, query_embedding, result_embedding):
     """
     Compute cosine similarity and per-dimension contributions
     
@@ -131,6 +133,7 @@ def compute_cosine_similarity_explanation(query_embedding, result_embedding):
     differences = np.abs(q_norm - r_norm)
     
     return {
+        "name": name,
         "similarity_score": similarity_score,
         "dimension_contributions": dimension_contributions.tolist(),
         "differences": differences.tolist(),
@@ -143,20 +146,24 @@ def main(db, song1_id, song2_id):
     song1 = db.get_track_by_subsonic_id(song1_id)
     song2 = db.get_track_by_subsonic_id(song2_id)
 
-    results1 = compute_cosine_similarity_explanation(
-        boldaric.feature_helper.track_to_embeddings(song1),
-        boldaric.feature_helper.track_to_embeddings(song2)
-    )
-    results2 = compute_cosine_similarity_explanation(
-        boldaric.feature_helper.track_to_embeddings_default_normalization(song1),
-        boldaric.feature_helper.track_to_embeddings_default_normalization(song2)
-    )
-    results3 = compute_cosine_similarity_explanation(
+    results1 = compute_cosine_similarity_explanation('Old',
         boldaric.feature_helper.track_to_embeddings_old_normalization(song1),
         boldaric.feature_helper.track_to_embeddings_old_normalization(song2)
     )
+    results2 = compute_cosine_similarity_explanation('Default',
+        boldaric.feature_helper.track_to_embeddings_default_normalization(song1),
+        boldaric.feature_helper.track_to_embeddings_default_normalization(song2)
+    )
+    results3 = compute_cosine_similarity_explanation('Mood',
+        boldaric.feature_helper.track_to_embeddings_mood(song1),
+        boldaric.feature_helper.track_to_embeddings_mood(song2)
+    )
+    results4 = compute_cosine_similarity_explanation('Genre',
+        boldaric.feature_helper.track_to_embeddings_genre(song1),
+        boldaric.feature_helper.track_to_embeddings_genre(song2)
+    )
 
-    print_results([results1, results2, results3])
+    print_results(song1, song2, [results1, results2, results3, results4])
     
 
 if __name__ == '__main__':
