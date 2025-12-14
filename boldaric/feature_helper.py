@@ -75,11 +75,14 @@ def track_to_embeddings(track: Track) -> list[float]:
 
 
 ##
-# Convert a track to embeddings with the old (default) normalization
-#  of each embedding. This generally works well.
+# Convert a track to embeddings with a normalization
+#  of each embedding. 
 def track_to_embeddings_default_normalization(track: Track) -> list[float]:
-    """Convert the meteadata from a track into an embedding
-    for chromadb using the old (default) normalization"""
+    """
+    Convert the meteadata from a track into an embedding
+    for chromadb using normalization. The normalization values
+    come from a sample set (about 10k) songs and a frozen
+    """
 
     embedding = []
 
@@ -203,3 +206,86 @@ def track_to_embeddings_default_normalization(track: Track) -> list[float]:
     embedding.extend(normalized.tolist())
     
     return embedding
+
+##
+# Convert a track to embeddings with the old (default) normalization
+#  of each embedding. This generally works well.
+def track_to_embeddings_old_normalization(track: Track) -> list[float]:
+    """
+    Convert the meteadata from a track into an embedding
+    for chromadb using the old (default) normalization
+    """
+
+    embedding = []
+
+    # 1. Genre Embeddings (128D)
+    genre_embeds = np.array(track.genre_embedding_array).flatten()
+    # This shouldn't happen, but make sure we are at 128
+    genre_embeds = (
+        genre_embeds[:128]
+        if len(genre_embeds) >= 128
+        else np.pad(genre_embeds, (0, 128 - len(genre_embeds)))
+    )
+    # Do some normalization, otherwise this
+    #  may dominate other features in lookups
+    genre_norm = np.linalg.norm(genre_embeds)
+    if genre_norm > 1e-9:
+        genre_embeds = genre_embeds / genre_norm
+    embedding.extend(genre_embeds.tolist())
+
+    # 2. MFCC features (13D)
+    mfcc_means = np.array(track.mfcc_mean_array)[:13]
+    # Normalize the entire MFCC vector rather than per-feature
+    norm = np.linalg.norm(mfcc_means)
+    if norm > 1e-9:
+        mfcc_means = mfcc_means / norm
+    embedding.extend(mfcc_means.tolist())
+
+    # Use some 0s
+    embedding.extend([
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+    ])
+    
+    # 3. Groove features (2D)
+    danceability = track.groove_danceability
+    tempo_stability = track.groove_tempo_stability
+    embedding.extend([danceability, 0.0, tempo_stability])
+    
+    
+    # 4. Mood features (5D)
+    mood_features = [
+        track.mood_aggressiveness,
+        track.mood_happiness,
+        track.mood_partiness,
+        track.mood_relaxedness,
+        track.mood_sadness,
+    ]
+    # Apply sigmoid activation
+    mood_features = 1 / (1 + np.exp(-np.array(mood_features)))
+    embedding.extend(mood_features.tolist())
+
+    # spectral
+    embedding.extend([0.0, 0.0, 0.0])
+    
+    # !mwd - My AI Agent suggest that I should have been
+    #  normalizing the full embedding in additional to normalizing
+    #  each feature. In earlier versions, I was not doing this. If
+    #  you have an old database, you'll need to run the
+    #  `scripts/fix-embedding-normalization.py` to migrate the
+    #  embeddings.
+    #
+    # Normalize the full embedding vector
+    embedding = np.array(embedding)
+    embedding /= np.linalg.norm(embedding)
+
+    return embedding.tolist()
