@@ -255,7 +255,9 @@ class StationDB:
                 .all()
             )
 
-    def get_embedding_history(self, collection: CollectionType, station_id: int) -> List[List[float]]:
+    def get_embedding_history(
+        self, collection: CollectionType, station_id: int
+    ) -> List[List[float]]:
         """Get embedding history for a station by fetching embeddings from tracks."""
         with self.Session() as session:
             # Get track history with associated tracks for this station
@@ -266,9 +268,7 @@ class StationDB:
             history = simulator.make_history(dimensions)
             for history_item in track_histories:
                 # Get the embedding for this track
-                embedding = collection.value.track_to_embeddings(
-                    history_item.track
-                )
+                embedding = collection.value.track_to_embeddings(history_item.track)
                 # Check that embedding has the right dimension
                 if len(embedding) == dimensions:
                     history = simulator.add_history(
@@ -276,7 +276,6 @@ class StationDB:
                     )
 
             return history
-
 
     # ----------------------
     # Track Management

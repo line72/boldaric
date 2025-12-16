@@ -21,25 +21,24 @@ from typing import Protocol
 #  we'll update this
 VERSION = 2
 
+
 class FeatureHelper(Protocol):
-    def name() -> str:
-        ...
-    
-    def dimensions() -> int:
-        ...
-    
-    def track_to_embeddings(track: Track) -> list[float]:
-        ...
+    def name() -> str: ...
+
+    def dimensions() -> int: ...
+
+    def track_to_embeddings(track: Track) -> list[float]: ...
+
 
 class DefaultFeatureHelper(FeatureHelper):
     @staticmethod
     def name():
         return "default"
-    
+
     @staticmethod
     def dimensions():
         return 163
-    
+
     @staticmethod
     def track_to_embeddings(track: Track) -> list[float]:
         """Convert the meteadata from a track into an embedding
@@ -95,15 +94,16 @@ class DefaultFeatureHelper(FeatureHelper):
 
         return embedding
 
+
 class NormalizedFeatureHelper(FeatureHelper):
     @staticmethod
     def name():
         return "normalized"
-    
+
     @staticmethod
     def dimensions():
         return 163
-    
+
     ##
     # Convert a track to embeddings with a normalization
     #  of each embedding.
@@ -250,11 +250,11 @@ class OldFeatureHelper(FeatureHelper):
     @staticmethod
     def name():
         return "old"
-    
+
     @staticmethod
     def dimensions():
         return 148
-    
+
     ##
     # Convert a track to embeddings with the old (default) normalization
     #  of each embedding. This generally works well.
@@ -327,11 +327,11 @@ class MoodFeatureHelper(FeatureHelper):
     @staticmethod
     def name():
         return "mood"
-    
+
     @staticmethod
     def dimensions():
         return 163
-    
+
     @staticmethod
     def track_to_embeddings(track: Track) -> list[float]:
         """
@@ -513,15 +513,16 @@ class MoodFeatureHelper(FeatureHelper):
 
         return embedding.tolist()
 
+
 class GenreFeatureHelper(FeatureHelper):
     @staticmethod
     def name():
         return "genre"
-    
+
     @staticmethod
     def dimensions():
         return 163
-    
+
     @staticmethod
     def track_to_embeddings(track: Track) -> list[float]:
         """

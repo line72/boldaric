@@ -9,10 +9,11 @@ import logging
 def get_logger():
     return logging.getLogger("boldaric")
 
+
 def compute_cosine_similarity_explanation(query_embedding, result_embedding):
     """
     Compute cosine similarity and per-dimension contributions
-    
+
     Returns:
       similarity_score: overall cosine similarity
       dimension_contributions: contribution of each dimension to the similarity
@@ -27,22 +28,22 @@ def compute_cosine_similarity_explanation(query_embedding, result_embedding):
     # Normalize the vectors
     q_norm = q / np.linalg.norm(q)
     r_norm = r / np.linalg.norm(r)
-    
+
     # Overall cosine similarity
     similarity_score = np.dot(q_norm, r_norm)
-    
+
     # Per-dimension contribution to dot product (before normalization)
     # This shows how each dimension contributes to the similarity
     dimension_contributions = q_norm * r_norm
-    
+
     # Alternative: contribution based on raw difference
     # This shows which dimensions differ the most
     differences = np.abs(q_norm - r_norm)
-    
+
     return {
         "similarity_score": similarity_score,
         "dimension_contributions": dimension_contributions.tolist(),
         "differences": differences.tolist(),
         "query_normalized": q_norm.tolist(),
-        "result_normalized": r_norm.tolist()
+        "result_normalized": r_norm.tolist(),
     }

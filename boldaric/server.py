@@ -91,7 +91,9 @@ def get_next_songs(
     )
     logger.debug(f"ignoring {station_options.replay_song_cooldown}: {ignore_list}")
 
-    tracks = db.query_similar(DEFAULT_COLLECTION, new_embeddings, n_results=45, ignore_songs=ignore_list)
+    tracks = db.query_similar(
+        DEFAULT_COLLECTION, new_embeddings, n_results=45, ignore_songs=ignore_list
+    )
 
     # resort these, and slightly downvote recent artists
     recent_artists = [x.track.artist for x in played[-15:]]

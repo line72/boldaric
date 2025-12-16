@@ -30,11 +30,13 @@ class TrackMetadata(BaseModel):
     album: str
     title: str
 
+
 class CollectionType(Enum):
     DEFAULT = feature_helper.NormalizedFeatureHelper
     OLD = feature_helper.OldFeatureHelper
     MOOD = feature_helper.MoodFeatureHelper
     GENRE = feature_helper.GenreFeatureHelper
+
 
 class VectorDB:
     def __init__(self, client: chromadb.ClientAPI):
@@ -63,7 +65,7 @@ class VectorDB:
     def delete_and_recreate_collections(self):
         for c in self.collections.keys():
             self.client.delete_collection(name=c.value)
-            
+
         # recreate
         self.collections = self._create_collections()
 
@@ -84,7 +86,7 @@ class VectorDB:
                 album=track.album,
                 title=track.title,
             ).model_dump()
-            
+
             self.collections[collection].upsert(
                 ids=subsonic_id, embeddings=[embedding], metadatas=[metadata]
             )
@@ -183,9 +185,15 @@ class VectorDB:
     def _create_collections(self):
         for x in CollectionType:
             print(x, type(x.value))
-        
-        return dict([
-            (x, self.client.get_or_create_collection(
-                name=x.value.name(),
-                metadata={"hnsw:space": "cosine"})
-             ) for x in CollectionType])
+
+        return dict(
+            [
+                (
+                    x,
+                    self.client.get_or_create_collection(
+                        name=x.value.name(), metadata={"hnsw:space": "cosine"}
+                    ),
+                )
+                for x in CollectionType
+            ]
+        )
