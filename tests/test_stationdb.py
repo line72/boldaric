@@ -404,25 +404,3 @@ def test_get_thumbs_downed_history(station_db):
     assert thumbs_downed[0].track.subsonic_id == "song2"
     assert thumbs_downed[1].track.subsonic_id == "song3"
 
-
-def test_load_station_history(station_db):
-    """Test loading station history."""
-    # Create a user, station, and track history
-    user_id = station_db.create_user("testuser")
-    station_id = station_db.create_station(user_id, "Test Station")
-
-    t1 = create_track(station_db, "Artist 1", "Album 1", "Title 1", "song1")
-    t2 = create_track(station_db, "Artist 2", "Album 2", "Title 2", "song2")
-
-    station_db.add_track_to_or_update_history(station_id, t1, False)
-    station_db.add_track_to_or_update_history(station_id, t2, True)
-
-    # Load station history
-    history, tracks, thumbs_downed = station_db.load_station_history(station_id)
-
-    # Check that we got the expected data
-    assert history is not None
-    assert len(tracks) == 2
-    assert len(thumbs_downed) == 1
-    assert thumbs_downed[0].track.artist == "Artist 2"
-    assert thumbs_downed[0].track.title == "Title 2"

@@ -92,7 +92,7 @@ class VectorDB:
             )
 
     def track_exists(self, collection: CollectionType, subsonic_id: str) -> bool:
-        return self.get_track(sollection, subsonic_id) != None
+        return self.get_track(collection, subsonic_id) != None
 
     def get_track(self, collection: CollectionType, subsonic_id: str) -> dict | None:
         results = self.collections[collection].get(ids=[subsonic_id])
