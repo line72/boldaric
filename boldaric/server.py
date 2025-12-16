@@ -44,6 +44,7 @@ SEED_RATING = 8
 THUMBS_UP_RATING = 5
 THUMBS_DOWN_RATING = -3
 
+DEFAULT_COLLECTION = boldaric.CollectionType.OLD
 
 routes = web.RouteTableDef()
 
@@ -90,7 +91,7 @@ def get_next_songs(
     )
     logger.debug(f"ignoring {station_options.replay_song_cooldown}: {ignore_list}")
 
-    tracks = db.query_similar(new_embeddings, n_results=45, ignore_songs=ignore_list)
+    tracks = db.query_similar(DEFAULT_COLLECTION, new_embeddings, n_results=45, ignore_songs=ignore_list)
 
     # resort these, and slightly downvote recent artists
     recent_artists = [x.track.artist for x in played[-15:]]
@@ -284,7 +285,7 @@ async def get_next_song_for_station(request):
         station_id = request.match_info["station_id"]
 
         # make our history...
-        history = station_db.get_embedding_history(station_id)
+        history = station_db.get_embedding_history(DEFAULT_COLLECTION, station_id)
 
         station_options: StationOptions = station_db.get_station_options(station_id)
 

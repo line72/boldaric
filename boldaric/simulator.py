@@ -10,10 +10,8 @@
 
 import numpy as np
 
-from boldaric.feature_helper import DIMENSIONS
 
-
-def make_history():
+def make_history(dimensions):
     # !mwd - I don't love how I am doing this
     #  But, we essentially have 148 dimensions:
     #  128 for genres
@@ -23,7 +21,7 @@ def make_history():
     # We'll create a list of DIMENSIONS lists were each list will store the
     #  history a tuple (value, weight) for a specific feature
 
-    return [[] for x in range(DIMENSIONS)]
+    return [[] for x in range(dimensions)]
 
 
 def add_history(history, feature_list, rank):

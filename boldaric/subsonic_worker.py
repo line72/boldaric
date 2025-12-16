@@ -135,8 +135,7 @@ def get_in(obj: Dict[str, Any], keys: List[str], default: Any = None) -> Any:
 
 
 def add_to_vector_db(vectordb, subsonic_id, track):
-    if not vectordb.track_exists(subsonic_id):
-        vectordb.add_track(subsonic_id, track)
+    vectordb.add_track(subsonic_id, track)
 
 
 def process_song(song, conn, stationdb, vectordb, skip_extraction):
