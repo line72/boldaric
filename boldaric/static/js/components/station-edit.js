@@ -52,6 +52,16 @@ class StationEdit extends HTMLElement {
         </div>
         <form id="edit-station-form">
           <div class="form-group">
+            <label for="station-category">Station Category:</label>
+            <select id="station-category">
+              <option value="default" ${this.station.category === 'default' ? 'selected' : ''}>Default</option>
+              <option value="mood" ${this.station.category === 'mood' ? 'selected' : ''}>Mood</option>
+              <option value="genre" ${this.station.category === 'genre' ? 'selected' : ''}>Genre</option>
+              <option value="old" ${this.station.category === 'old' ? 'selected' : ''}>Old</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
             <label>
               <input type="checkbox" id="ignore-live" ${this.station.ignore_live ? 'checked' : ''}>
               Ignore live recordings
@@ -105,6 +115,7 @@ class StationEdit extends HTMLElement {
     const replayCooldown = parseInt(this.querySelector('#replay-cooldown').value);
     const artistDownrank = parseFloat(this.querySelector('#artist-downrank').value);
     const ignoreLive = this.querySelector('#ignore-live').checked;
+    const category = this.querySelector('#station-category').value;
 
     try {
       const response = await fetch(`/api/station/${this.stationId}/info`, {
@@ -116,7 +127,8 @@ class StationEdit extends HTMLElement {
         body: JSON.stringify({
           replay_song_cooldown: replayCooldown,
           replay_artist_downrank: artistDownrank,
-          ignore_live: ignoreLive
+          ignore_live: ignoreLive,
+          category: category
         })
       });
 

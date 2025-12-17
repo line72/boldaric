@@ -183,9 +183,6 @@ class VectorDB:
 
     ## Internal ##
     def _create_collections(self):
-        for x in CollectionType:
-            print(x, type(x.value))
-
         return dict(
             [
                 (
