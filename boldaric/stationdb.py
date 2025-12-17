@@ -17,7 +17,7 @@ from importlib import resources
 
 from . import simulator
 from . import feature_helper
-from .records.station_options import StationOptions
+from .records.station_options import StationOptions, StationCategory
 
 import alembic
 from alembic import command
@@ -131,10 +131,13 @@ class StationDB:
         with self.Session() as session:
             station = session.query(Station).filter(Station.id == station_id).first()
             if station:
+                # Convert string category to enum
+                category_enum = StationCategory(station.category) if station.category else StationCategory.DEFAULT
                 return StationOptions(
                     replay_song_cooldown=station.replay_song_cooldown,
                     replay_artist_downrank=station.replay_artist_downrank,
                     ignore_live=station.ignore_live,
+                    category=category_enum,
                 )
             # Fallback to default options if station not found
             return StationOptions()
@@ -145,6 +148,7 @@ class StationDB:
         replay_song_cooldown: int,
         replay_artist_downrank: float,
         ignore_live: bool,
+        category: str = "default",
     ) -> None:
         with self.Session() as session:
             station = session.query(Station).filter(Station.id == station_id).first()
@@ -152,6 +156,11 @@ class StationDB:
                 station.replay_song_cooldown = replay_song_cooldown
                 station.replay_artist_downrank = replay_artist_downrank
                 station.ignore_live = ignore_live
+                # Convert category string to enum value if needed
+                if isinstance(category, StationCategory):
+                    station.category = category.value
+                else:
+                    station.category = category
                 session.commit()
 
     def get_station_embedding(self, station_id: int) -> Optional[List[float]]:

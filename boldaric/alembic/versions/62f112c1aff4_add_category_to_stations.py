@@ -1,7 +1,7 @@
 """add_category_to_stations
 
 Revision ID: 62f112c1aff4
-Revises: [generated_revision_id]
+Revises: b657c1674be1
 Create Date: 2025-12-17 09:45:00.986673
 
 """
@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = '62f112c1aff4'
-down_revision: Union[str, None] = '[generated_revision_id]'
+down_revision: Union[str, None] = 'b657c1674be1'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

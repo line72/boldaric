@@ -28,7 +28,7 @@ from importlib import resources, metadata
 import boldaric
 import boldaric.subsonic
 from boldaric.utils import get_logger
-from boldaric.records.station_options import StationOptions
+from boldaric.records.station_options import StationOptions, StationCategory
 
 # Development mode path
 DEV_RESOURCES = Path(__file__).parent.parent / "resources"
@@ -55,12 +55,14 @@ class CreateStationParams(BaseModel):
     replay_song_cooldown: int = Field(default=50)
     replay_artist_downrank: float = Field(default=0.995)
     ignore_live: bool = Field(default=False)
+    category: str = Field(default="default")
 
 
 class UpdateStationParams(BaseModel):
     replay_song_cooldown: int = Field(default=50)
     replay_artist_downrank: float = Field(default=0.995)
     ignore_live: bool = Field(default=False)
+    category: str = Field(default="default")
 
 
 def get_next_songs(
@@ -207,6 +209,7 @@ async def get_stations(request):
                 "replay_song_cooldown": station.replay_song_cooldown,
                 "replay_artist_downrank": station.replay_artist_downrank,
                 "ignore_live": station.ignore_live,
+                "category": station.category,
             }
             for station in stations
         ]
@@ -249,6 +252,7 @@ async def make_station(request):
             params.replay_song_cooldown,
             params.replay_artist_downrank,
             params.ignore_live,
+            params.category,
         )
 
         station_db.add_track_to_or_update_history(station_id, track, False, SEED_RATING)
@@ -258,7 +262,10 @@ async def make_station(request):
 
         return web.json_response(
             {
-                "station": {"id": station_id, "name": params.station_name},
+                "station": {
+                    "id": station_id,
+                    "name": params.station_name
+                },
                 "track": {
                     "url": stream_url,
                     "song_id": track.subsonic_id,
@@ -379,6 +386,7 @@ async def get_station_info(request):
                 "replay_song_cooldown": station.replay_song_cooldown,
                 "replay_artist_downrank": station.replay_artist_downrank,
                 "ignore_live": station.ignore_live,
+                "category": station.category,
             }
             return web.json_response(station_dict)
         else:
@@ -415,6 +423,7 @@ async def update_station_info(request):
             params.replay_song_cooldown,
             params.replay_artist_downrank,
             params.ignore_live,
+            params.category,
         )
 
         # Get updated station to return current values
@@ -427,6 +436,7 @@ async def update_station_info(request):
                 "replay_song_cooldown": station.replay_song_cooldown,
                 "replay_artist_downrank": station.replay_artist_downrank,
                 "ignore_live": station.ignore_live,
+                "category": station.category,
             }
             return web.json_response(station_dict)
         else:
