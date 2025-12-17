@@ -5,6 +5,7 @@ Revises: b657c1674be1
 Create Date: 2025-12-17 09:45:00.986673
 
 """
+
 from typing import Sequence, Union
 
 from alembic import op
@@ -12,26 +13,28 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '62f112c1aff4'
-down_revision: Union[str, None] = 'b657c1674be1'
+revision: str = "62f112c1aff4"
+down_revision: Union[str, None] = "b657c1674be1"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
     # Create the category enumeration type
-    category_enum = sa.Enum('normalized', 'mood', 'genre', 'old', name='station_category')
+    category_enum = sa.Enum(
+        "normalized", "mood", "genre", "old", name="station_category"
+    )
     category_enum.create(op.get_bind())
-    
+
     # Add category column to stations table with default value 'normalized'
     op.add_column(
         "stations",
         sa.Column(
-            "category", 
-            sa.Enum('normalized', 'mood', 'genre', 'old', name='station_category'), 
-            nullable=False, 
-            default='normalized',
-            server_default='normalized'
+            "category",
+            sa.Enum("normalized", "mood", "genre", "old", name="station_category"),
+            nullable=False,
+            default="normalized",
+            server_default="normalized",
         ),
     )
 
@@ -39,6 +42,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     # Remove the category column
     op.drop_column("stations", "category")
-    
+
     # Drop the enumeration type
-    sa.Enum(name='station_category').drop(op.get_bind())
+    sa.Enum(name="station_category").drop(op.get_bind())

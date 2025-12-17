@@ -93,7 +93,9 @@ def get_next_songs(
 
     tracks = db.query_similar(
         find_collection(station_options.category),
-        new_embeddings, n_results=45, ignore_songs=ignore_list
+        new_embeddings,
+        n_results=45,
+        ignore_songs=ignore_list,
     )
 
     # resort these, and slightly downvote recent artists
@@ -133,6 +135,7 @@ def get_next_songs(
 
     return tracks
 
+
 def find_collection(category):
     if isinstance(category, StationCategory):
         category_name = category.value
@@ -140,11 +143,11 @@ def find_collection(category):
         category_name = category
 
     for c in boldaric.CollectionType:
-        print(f'comparing {c.value.name()} == {category_name}')
         if c.value.name() == category_name:
             return c
 
-    raise Exception(f'Invalid collection category: {category_name}')
+    raise Exception(f"Invalid collection category: {category_name}")
+
 
 @web.middleware
 async def auth_middleware(request, handler):
@@ -273,10 +276,7 @@ async def make_station(request):
 
         return web.json_response(
             {
-                "station": {
-                    "id": station_id,
-                    "name": params.station_name
-                },
+                "station": {"id": station_id, "name": params.station_name},
                 "track": {
                     "url": stream_url,
                     "song_id": track.subsonic_id,
@@ -307,8 +307,7 @@ async def get_next_song_for_station(request):
 
         # make our history...
         history = station_db.get_embedding_history(
-            find_collection(station_options.category),
-            station_id
+            find_collection(station_options.category), station_id
         )
 
         # load up the track history

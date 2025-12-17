@@ -89,7 +89,7 @@ def temp_db():
 
 def test_add_track(temp_db):
     collection = CollectionType.OLD
-    
+
     t = make_track(SAMPLE_FEATURES)
     temp_db.add_track(SAMPLE_SUBSONIC_ID, t)
 
@@ -103,7 +103,7 @@ def test_add_track(temp_db):
 
 def test_track_exists(temp_db):
     collection = CollectionType.OLD
-    
+
     assert not temp_db.track_exists(collection, SAMPLE_SUBSONIC_ID)
     t = make_track(SAMPLE_FEATURES)
     temp_db.add_track(SAMPLE_SUBSONIC_ID, t)
@@ -112,7 +112,7 @@ def test_track_exists(temp_db):
 
 def test_query_similar(temp_db):
     collection = CollectionType.OLD
-    
+
     # Add the base track
     t = make_track(SAMPLE_FEATURES)
     temp_db.add_track(SAMPLE_SUBSONIC_ID, t)

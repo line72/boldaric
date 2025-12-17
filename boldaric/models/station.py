@@ -1,4 +1,13 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, ForeignKey, PickleType, Enum
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    Float,
+    ForeignKey,
+    PickleType,
+    Enum,
+)
 from sqlalchemy.orm import relationship
 
 from . import Base
@@ -15,8 +24,11 @@ class Station(Base):
     replay_song_cooldown = Column(Integer, default=0)
     replay_artist_downrank = Column(Float, default=0.995)
     ignore_live = Column(Boolean, default=False)
-    category = Column(Enum('normalized', 'mood', 'genre', 'old', name='station_category'), 
-                      nullable=False, default='normalized')
+    category = Column(
+        Enum("normalized", "mood", "genre", "old", name="station_category"),
+        nullable=False,
+        default="normalized",
+    )
     current_embedding = Column(PickleType)
 
     # Relationships

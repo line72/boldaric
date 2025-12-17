@@ -403,4 +403,3 @@ def test_get_thumbs_downed_history(station_db):
     # Should be ordered by created_at ascending (oldest first)
     assert thumbs_downed[0].track.subsonic_id == "song2"
     assert thumbs_downed[1].track.subsonic_id == "song3"
-

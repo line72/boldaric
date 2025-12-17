@@ -132,7 +132,11 @@ class StationDB:
             station = session.query(Station).filter(Station.id == station_id).first()
             if station:
                 # Convert string category to enum
-                category_enum = StationCategory(station.category) if station.category else StationCategory.NORMALIZED
+                category_enum = (
+                    StationCategory(station.category)
+                    if station.category
+                    else StationCategory.NORMALIZED
+                )
                 return StationOptions(
                     replay_song_cooldown=station.replay_song_cooldown,
                     replay_artist_downrank=station.replay_artist_downrank,
