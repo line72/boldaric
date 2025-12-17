@@ -63,8 +63,8 @@ class VectorDB:
         return VectorDB(client)
 
     def delete_and_recreate_collections(self):
-        for c in self.collections.keys():
-            self.client.delete_collection(name=c.value)
+        for c in self.client.list_collections():
+            self.client.delete_collection(name=c.name)
 
         # recreate
         self.collections = self._create_collections()
