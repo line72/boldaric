@@ -3,7 +3,7 @@ from enum import Enum
 
 
 class StationCategory(Enum):
-    DEFAULT = "default"
+    NORMALIZED = "normalized"
     MOOD = "mood"
     GENRE = "genre"
     OLD = "old"
@@ -14,4 +14,4 @@ class StationOptions:
     replay_song_cooldown: int = 0
     replay_artist_downrank: float = 0.995
     ignore_live: bool = False
-    category: StationCategory = StationCategory.DEFAULT
+    category: StationCategory = StationCategory.NORMALIZED

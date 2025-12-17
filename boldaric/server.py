@@ -44,8 +44,6 @@ SEED_RATING = 8
 THUMBS_UP_RATING = 5
 THUMBS_DOWN_RATING = -3
 
-DEFAULT_COLLECTION = boldaric.CollectionType.OLD
-
 routes = web.RouteTableDef()
 
 
@@ -55,14 +53,14 @@ class CreateStationParams(BaseModel):
     replay_song_cooldown: int = Field(default=50)
     replay_artist_downrank: float = Field(default=0.995)
     ignore_live: bool = Field(default=False)
-    category: str = Field(default="default")
+    category: str = Field(default="normalized")
 
 
 class UpdateStationParams(BaseModel):
     replay_song_cooldown: int = Field(default=50)
     replay_artist_downrank: float = Field(default=0.995)
     ignore_live: bool = Field(default=False)
-    category: str = Field(default="default")
+    category: str = Field(default="normalized")
 
 
 def get_next_songs(
@@ -94,7 +92,8 @@ def get_next_songs(
     logger.debug(f"ignoring {station_options.replay_song_cooldown}: {ignore_list}")
 
     tracks = db.query_similar(
-        DEFAULT_COLLECTION, new_embeddings, n_results=45, ignore_songs=ignore_list
+        find_collection(station_options.category),
+        new_embeddings, n_results=45, ignore_songs=ignore_list
     )
 
     # resort these, and slightly downvote recent artists
@@ -134,6 +133,18 @@ def get_next_songs(
 
     return tracks
 
+def find_collection(category):
+    if isinstance(category, StationCategory):
+        category_name = category.value
+    else:
+        category_name = category
+
+    for c in boldaric.CollectionType:
+        print(f'comparing {c.value.name()} == {category_name}')
+        if c.value.name() == category_name:
+            return c
+
+    raise Exception(f'Invalid collection category: {category_name}')
 
 @web.middleware
 async def auth_middleware(request, handler):
@@ -292,11 +303,13 @@ async def get_next_song_for_station(request):
         loop = asyncio.get_running_loop()
 
         station_id = request.match_info["station_id"]
+        station_options: StationOptions = station_db.get_station_options(station_id)
 
         # make our history...
-        history = station_db.get_embedding_history(DEFAULT_COLLECTION, station_id)
-
-        station_options: StationOptions = station_db.get_station_options(station_id)
+        history = station_db.get_embedding_history(
+            find_collection(station_options.category),
+            station_id
+        )
 
         # load up the track history
         thumbs_downed = station_db.get_thumbs_downed_history(station_id)
@@ -679,7 +692,7 @@ def main():
 
     version = metadata.version("boldaric")
 
-    logger.info("Starting boldaric version {version}")
+    logger.info(f"Starting boldaric version {version}")
 
     # Handle database initialization
     if args.initialize_db:

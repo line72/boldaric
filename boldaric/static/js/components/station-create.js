@@ -9,7 +9,7 @@ class StationCreate extends HTMLElement {
       ignoreLive: false,
       replayCooldown: 50,
       artistDownrank: 0.995,
-      category: 'default'
+      category: 'normalized'
     };
   }
 
@@ -56,7 +56,7 @@ class StationCreate extends HTMLElement {
           <div class="form-group">
             <label for="station-category">Station Category:</label>
             <select id="station-category" value="${this.formValues.category}">
-              <option value="default" ${this.formValues.category === 'default' ? 'selected' : ''}>Default</option>
+              <option value="normalized" ${this.formValues.category === 'normalized' ? 'selected' : ''}>Normalized</option>
               <option value="mood" ${this.formValues.category === 'mood' ? 'selected' : ''}>Mood</option>
               <option value="genre" ${this.formValues.category === 'genre' ? 'selected' : ''}>Genre</option>
               <option value="old" ${this.formValues.category === 'old' ? 'selected' : ''}>Old</option>
@@ -284,7 +284,7 @@ class StationCreate extends HTMLElement {
     const ignoreLive = this.formValues.ignoreLive || this.querySelector('#ignore-live').checked;
     const replayCooldown = parseInt(this.formValues.replayCooldown) || parseInt(this.querySelector('#replay-cooldown').value) || 50;
     const artistDownrank = parseFloat(this.formValues.artistDownrank) || parseFloat(this.querySelector('#artist-downrank').value) || 0.995;
-    const category = this.formValues.category || this.querySelector('#station-category').value || 'default';
+    const category = this.formValues.category || this.querySelector('#station-category').value || 'normalized';
 
     console.log('Form values:', { stationName, ignoreLive, replayCooldown, artistDownrank, category });
 

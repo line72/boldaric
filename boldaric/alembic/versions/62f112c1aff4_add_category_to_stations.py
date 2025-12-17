@@ -20,18 +20,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Create the category enumeration type
-    category_enum = sa.Enum('default', 'mood', 'genre', 'old', name='station_category')
+    category_enum = sa.Enum('normalized', 'mood', 'genre', 'old', name='station_category')
     category_enum.create(op.get_bind())
     
-    # Add category column to stations table with default value 'default'
+    # Add category column to stations table with default value 'normalized'
     op.add_column(
         "stations",
         sa.Column(
             "category", 
-            sa.Enum('default', 'mood', 'genre', 'old', name='station_category'), 
+            sa.Enum('normalized', 'mood', 'genre', 'old', name='station_category'), 
             nullable=False, 
-            default='default',
-            server_default='default'
+            default='normalized',
+            server_default='normalized'
         ),
     )
 

@@ -54,7 +54,7 @@ class StationEdit extends HTMLElement {
           <div class="form-group">
             <label for="station-category">Station Category:</label>
             <select id="station-category">
-              <option value="default" ${this.station.category === 'default' ? 'selected' : ''}>Default</option>
+              <option value="normalized" ${this.station.category === 'normalized' ? 'selected' : ''}>Normalized</option>
               <option value="mood" ${this.station.category === 'mood' ? 'selected' : ''}>Mood</option>
               <option value="genre" ${this.station.category === 'genre' ? 'selected' : ''}>Genre</option>
               <option value="old" ${this.station.category === 'old' ? 'selected' : ''}>Old</option>

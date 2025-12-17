@@ -15,8 +15,8 @@ class Station(Base):
     replay_song_cooldown = Column(Integer, default=0)
     replay_artist_downrank = Column(Float, default=0.995)
     ignore_live = Column(Boolean, default=False)
-    category = Column(Enum('default', 'mood', 'genre', 'old', name='station_category'), 
-                      nullable=False, default='default')
+    category = Column(Enum('normalized', 'mood', 'genre', 'old', name='station_category'), 
+                      nullable=False, default='normalized')
     current_embedding = Column(PickleType)
 
     # Relationships
