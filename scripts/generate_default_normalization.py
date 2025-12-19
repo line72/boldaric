@@ -20,7 +20,7 @@ def main(db):
 
         embeddings = []
         for track in query:
-            embeddings.append(boldaric.feature_helper.track_to_embeddings(track))
+            embeddings.append(boldaric.feature_helper.DefaultFeatureHelper.track_to_embeddings(track))
 
         embeddings = np.array(embeddings, dtype=np.float32)
             

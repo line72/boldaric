@@ -197,7 +197,7 @@ def load_embeddings(db, inp):
         song_ids = yaml.safe_load(f)['tracks']
         tracks = [db.get_track_by_subsonic_id(x) for x in song_ids]
         assert None not in tracks, f"Invalid subsonic_id in {inp}"
-        return np.array([boldaric.feature_helper.track_to_embeddings(t) for t in tracks])
+        return np.array([boldaric.feature_helper.DefaultFeatureHelper.track_to_embeddings(t) for t in tracks])
 
 # -----------------------------
 # Main script / demo
