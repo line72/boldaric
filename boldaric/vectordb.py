@@ -188,7 +188,12 @@ class VectorDB:
                 (
                     x,
                     self.client.get_or_create_collection(
-                        name=x.value.name(), metadata={"hnsw:space": "cosine"}
+                        name=x.value.name(),
+                        configuration={
+                            "hnsw": {
+                                "space": x.value.space()
+                            }
+                        }
                     ),
                 )
                 for x in CollectionType

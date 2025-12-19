@@ -27,6 +27,8 @@ class FeatureHelper(Protocol):
 
     def dimensions() -> int: ...
 
+    def space() -> str: ...
+
     def track_to_embeddings(track: Track) -> list[float]: ...
 
 
@@ -38,6 +40,10 @@ class DefaultFeatureHelper(FeatureHelper):
     @staticmethod
     def dimensions():
         return 163
+
+    @staticmethod
+    def space():
+        return 'cosine'
 
     @staticmethod
     def track_to_embeddings(track: Track) -> list[float]:
@@ -103,6 +109,10 @@ class NormalizedFeatureHelper(FeatureHelper):
     @staticmethod
     def dimensions():
         return 163
+
+    @staticmethod
+    def space():
+        return 'cosine'
 
     ##
     # Convert a track to embeddings with a normalization
@@ -255,6 +265,10 @@ class OldFeatureHelper(FeatureHelper):
     def dimensions():
         return 148
 
+    @staticmethod
+    def space():
+        return 'cosine'
+
     ##
     # Convert a track to embeddings with the old (default) normalization
     #  of each embedding. This generally works well.
@@ -331,6 +345,10 @@ class MoodFeatureHelper(FeatureHelper):
     @staticmethod
     def dimensions():
         return 163
+
+    @staticmethod
+    def space():
+        return 'ip'
 
     @staticmethod
     def track_to_embeddings(track: Track) -> list[float]:
@@ -521,7 +539,11 @@ class GenreFeatureHelper(FeatureHelper):
 
     @staticmethod
     def dimensions():
-        return 163
+        return 128
+
+    @staticmethod
+    def space():
+        return 'l2'
 
     @staticmethod
     def track_to_embeddings(track: Track) -> list[float]:
@@ -532,10 +554,6 @@ class GenreFeatureHelper(FeatureHelper):
         then apply fisher weights for GENRE. We basically remove
         all other weights
         """
-        FISHER_GENRE_WEIGHTS = [1.0] * 128 + [0.0] * 35
+        embedding = DefaultFeatureHelper.track_to_embeddings(track)[:128]
 
-        embedding = NormalizedFeatureHelper.track_to_embeddings(track)
-
-        embedding = np.array(embedding) * np.array(FISHER_GENRE_WEIGHTS)
-
-        return embedding.tolist()
+        return embedding
