@@ -26,10 +26,18 @@ def go(stationdb, vectordb):
             total_count = session.query(func.count(boldaric.models.Track.id)).scalar()
             query = session.query(boldaric.models.Track).yield_per(1000)
 
+            # Delete the whole collection
+            vectordb.delete_and_recreate_collections()
+            
             task_id = progress.add_task('Re-Indexing', total=total_count)
                     
             for track in query:
-                vectordb.add_track(track.subsonic_id, track)
+                try:
+                    vectordb.add_track(track.subsonic_id, track)
+                except Exception as e:
+                    import traceback
+                    print(f'Error inserting track {track.subsonic_id}: {e}')
+                    print(traceback.format_exc())
                 progress.update(task_id, advance=1)
 
 if __name__ == '__main__':

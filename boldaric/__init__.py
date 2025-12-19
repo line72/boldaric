@@ -1,4 +1,4 @@
-from .vectordb import VectorDB
+from .vectordb import VectorDB, CollectionType
 from .stationdb import StationDB
 from . import simulator
 from . import feature_helper

@@ -17,13 +17,11 @@ import chromadb
 import numpy as np
 
 from pydantic import BaseModel
+from enum import Enum
 
 from . import feature_helper
 
 from .models.track import Track
-
-# Hard-coded to the number of dimension we extract
-DIMENSIONS = 148
 
 
 class TrackMetadata(BaseModel):
@@ -33,15 +31,17 @@ class TrackMetadata(BaseModel):
     title: str
 
 
+class CollectionType(Enum):
+    DEFAULT = feature_helper.NormalizedFeatureHelper
+    OLD = feature_helper.OldFeatureHelper
+    MOOD = feature_helper.MoodFeatureHelper
+    GENRE = feature_helper.GenreFeatureHelper
+
+
 class VectorDB:
     def __init__(self, client: chromadb.ClientAPI):
-        collection_name = "audio_features"
-
         self.client = client
-        self.collection = self.client.get_or_create_collection(
-            name=collection_name,
-            metadata={"hnsw:space": "cosine", "dimension": DIMENSIONS},
-        )
+        self.collections = self._create_collections()
 
     @staticmethod
     def build_from_path(path: str) -> "VectorDB":
@@ -62,6 +62,13 @@ class VectorDB:
         )
         return VectorDB(client)
 
+    def delete_and_recreate_collections(self):
+        for c in self.client.list_collections():
+            self.client.delete_collection(name=c.name)
+
+        # recreate
+        self.collections = self._create_collections()
+
     def add_track(self, subsonic_id: str, track: Track):
         """Store a track's features"""
 
@@ -70,24 +77,25 @@ class VectorDB:
         # A future plan, is to either:
         #  - Store un-normalized embeddings in the db, then do scaling when we query
         #  - Or, have multiple collections, each with a category of embedding (default, mood, energy, genre similarity, ...)
-        embedding = feature_helper.track_to_embeddings_default_normalization(track)
+        for collection in CollectionType:
+            embedding = collection.value.track_to_embeddings(track)
 
-        metadata = TrackMetadata(
-            subsonic_id=subsonic_id,
-            artist=track.artist,
-            album=track.album,
-            title=track.title,
-        ).model_dump()
+            metadata = TrackMetadata(
+                subsonic_id=subsonic_id,
+                artist=track.artist,
+                album=track.album,
+                title=track.title,
+            ).model_dump()
 
-        self.collection.upsert(
-            ids=subsonic_id, embeddings=[embedding], metadatas=[metadata]
-        )
+            self.collections[collection].upsert(
+                ids=subsonic_id, embeddings=[embedding], metadatas=[metadata]
+            )
 
-    def track_exists(self, subsonic_id: str) -> bool:
-        return self.get_track(subsonic_id) != None
+    def track_exists(self, collection: CollectionType, subsonic_id: str) -> bool:
+        return self.get_track(collection, subsonic_id) != None
 
-    def get_track(self, subsonic_id: str) -> dict | None:
-        results = self.collection.get(ids=[subsonic_id])
+    def get_track(self, collection: CollectionType, subsonic_id: str) -> dict | None:
+        results = self.collections[collection].get(ids=[subsonic_id])
         if results and len(results["ids"]) > 0:
             return {
                 "id": results["ids"][0],
@@ -95,9 +103,9 @@ class VectorDB:
             }
         return None
 
-    def get_all_tracks(self) -> list[dict]:
+    def get_all_tracks(self, collection: CollectionType) -> list[dict]:
         """Get all tracks from the database"""
-        results = self.collection.get(include=["embeddings", "metadatas"])
+        results = self.collections[collection].get(include=["embeddings", "metadatas"])
 
         # Process results into a list of dictionaries
         tracks = []
@@ -116,21 +124,25 @@ class VectorDB:
 
     def delete_track(self, subsonic_id: str) -> None:
         """Delete a track by its subsonic_id"""
-        self.collection.delete(ids=[subsonic_id])
+        for c in CollectionType:
+            self.collections[c].delete(ids=[subsonic_id])
 
     def delete_tracks(self, subsonic_ids: list[str]) -> None:
         """Delete multiple tracks by their subsonic_ids"""
         if len(subsonic_ids) > 0:
-            self.collection.delete(ids=subsonic_ids)
+            for c in CollectionType:
+                self.collections[c].delete(ids=subsonic_ids)
 
     def delete_all_tracks(self) -> None:
         """Delete all tracks from the database"""
-        all_ids = self.collection.get(include=[])["ids"]
-        if all_ids:
-            self.collection.delete(ids=all_ids)
+        for c in CollectionType:
+            all_ids = self.collections[c].get(include=[])["ids"]
+            if all_ids:
+                self.collections[c].delete(ids=all_ids)
 
     def query_similar(
         self,
+        collection: CollectionType,
         embedding: list[float],
         n_results: int = 5,
         ignore_songs: list[tuple[str, str]] = [],
@@ -138,7 +150,7 @@ class VectorDB:
         # query for similar items. We are going to do some filtering,
         #  so we query for 3x more results, but only return the top
         #  n_results
-        results = self.collection.query(
+        results = self.collections[collection].query(
             query_embeddings=[embedding],
             n_results=n_results * 3,
             include=["embeddings", "metadatas", "distances"],
@@ -168,3 +180,18 @@ class VectorDB:
         final_results.sort(key=lambda x: -x["similarity"])
 
         return final_results[:n_results]
+
+    ## Internal ##
+    def _create_collections(self):
+        return dict(
+            [
+                (
+                    x,
+                    self.client.get_or_create_collection(
+                        name=x.value.name(),
+                        configuration={"hnsw": {"space": x.value.space()}},
+                    ),
+                )
+                for x in CollectionType
+            ]
+        )

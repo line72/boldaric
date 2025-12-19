@@ -17,7 +17,7 @@ from importlib import resources
 
 from . import simulator
 from . import feature_helper
-from .records.station_options import StationOptions
+from .records.station_options import StationOptions, StationCategory
 
 import alembic
 from alembic import command
@@ -32,6 +32,7 @@ from .models.track_history import TrackHistory
 from .models.track import Track
 from .models.genre import Genre
 from .models.track_genre import TrackGenre
+from .vectordb import CollectionType
 
 
 class StationDB:
@@ -130,10 +131,17 @@ class StationDB:
         with self.Session() as session:
             station = session.query(Station).filter(Station.id == station_id).first()
             if station:
+                # Convert string category to enum
+                category_enum = (
+                    StationCategory(station.category)
+                    if station.category
+                    else StationCategory.NORMALIZED
+                )
                 return StationOptions(
                     replay_song_cooldown=station.replay_song_cooldown,
                     replay_artist_downrank=station.replay_artist_downrank,
                     ignore_live=station.ignore_live,
+                    category=category_enum,
                 )
             # Fallback to default options if station not found
             return StationOptions()
@@ -144,6 +152,7 @@ class StationDB:
         replay_song_cooldown: int,
         replay_artist_downrank: float,
         ignore_live: bool,
+        category: str = "normalized",
     ) -> None:
         with self.Session() as session:
             station = session.query(Station).filter(Station.id == station_id).first()
@@ -151,6 +160,11 @@ class StationDB:
                 station.replay_song_cooldown = replay_song_cooldown
                 station.replay_artist_downrank = replay_artist_downrank
                 station.ignore_live = ignore_live
+                # Convert category string to enum value if needed
+                if isinstance(category, StationCategory):
+                    station.category = category.value
+                else:
+                    station.category = category
                 session.commit()
 
     def get_station_embedding(self, station_id: int) -> Optional[List[float]]:
@@ -254,64 +268,27 @@ class StationDB:
                 .all()
             )
 
-    def get_embedding_history(self, station_id: int) -> List[List[float]]:
+    def get_embedding_history(
+        self, collection: CollectionType, station_id: int
+    ) -> List[List[float]]:
         """Get embedding history for a station by fetching embeddings from tracks."""
         with self.Session() as session:
             # Get track history with associated tracks for this station
             track_histories = self.get_track_history_all(station_id)
 
             # Extract just the embeddings from the tracks
-            history = simulator.make_history()
+            dimensions = collection.value.dimensions()
+            history = simulator.make_history(dimensions)
             for history_item in track_histories:
                 # Get the embedding for this track
-                embedding = feature_helper.track_to_embeddings_default_normalization(
-                    history_item.track
-                )
-                # Check that embedding has the right dimension (148)
-                if len(embedding) == 148:
+                embedding = collection.value.track_to_embeddings(history_item.track)
+                # Check that embedding has the right dimension
+                if len(embedding) == dimensions:
                     history = simulator.add_history(
                         history, embedding, history_item.rating
                     )
 
             return history
-
-    # !mwd - TODO: This isn't currently used. Remove?
-    def load_station_history(
-        self, station_id: int
-    ) -> Tuple[List[Any], List[TrackHistory], List[Dict[str, Any]]]:
-        """Load embedding history, track history, and thumbs downed history for a station."""
-        tracks = self.get_track_history_all(station_id)
-
-        # Build history from embeddings
-        history = simulator.make_history()
-        for track_history in tracks:
-            # Get the embedding for this track
-            embedding = feature_helper.track_to_embeddings_default_normalization(
-                track_history.track
-            )
-            # Check that embedding has the right dimension (148)
-            if len(embedding) == 148:
-                history = simulator.add_history(
-                    history, embedding, track_history.rating
-                )
-
-        # Build thumbs downed from track history
-        thumbs_downed = []
-        with self.Session() as session:
-            thumbs_downed = (
-                session.query(TrackHistory)
-                .options(joinedload(TrackHistory.track))  # Eagerly load the track
-                .filter(
-                    and_(
-                        TrackHistory.station_id == station_id,
-                        TrackHistory.is_thumbs_downed == True,
-                    )
-                )
-                .order_by(TrackHistory.created_at)
-                .all()
-            )
-
-        return history, tracks, thumbs_downed
 
     # ----------------------
     # Track Management

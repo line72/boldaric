@@ -227,7 +227,7 @@ class TestServer(AioHTTPTestCase):
             ):
                 # Mock the track_to_embeddings function
                 with patch(
-                    "boldaric.feature_helper.track_to_embeddings",
+                    "boldaric.feature_helper.OldFeatureHelper.track_to_embeddings",
                     return_value=[0.1] * 148,
                 ):
                     # Make request
@@ -365,7 +365,8 @@ class TestServer(AioHTTPTestCase):
 
         # Mock the track_to_embeddings function
         with patch(
-            "boldaric.feature_helper.track_to_embeddings", return_value=[0.1] * 148
+            "boldaric.feature_helper.OldFeatureHelper.track_to_embeddings",
+            return_value=[0.1] * 148,
         ):
             # Make request
             resp = await self.client.request(
@@ -407,7 +408,8 @@ class TestServer(AioHTTPTestCase):
 
         # Mock the track_to_embeddings function
         with patch(
-            "boldaric.feature_helper.track_to_embeddings", return_value=[0.1] * 148
+            "boldaric.feature_helper.OldFeatureHelper.track_to_embeddings",
+            return_value=[0.1] * 148,
         ):
             # Make request
             resp = await self.client.request(
@@ -445,7 +447,8 @@ class TestServer(AioHTTPTestCase):
 
         # Mock the track_to_embeddings function
         with patch(
-            "boldaric.feature_helper.track_to_embeddings", return_value=[0.1] * 148
+            "boldaric.feature_helper.OldFeatureHelper.track_to_embeddings",
+            return_value=[0.1] * 148,
         ):
             # Make request
             resp = await self.client.request(
@@ -484,7 +487,8 @@ class TestServer(AioHTTPTestCase):
 
         # Mock the track_to_embeddings function
         with patch(
-            "boldaric.feature_helper.track_to_embeddings", return_value=[0.1] * 148
+            "boldaric.feature_helper.OldFeatureHelper.track_to_embeddings",
+            return_value=[0.1] * 148,
         ):
             # Make request
             resp = await self.client.request(
@@ -553,7 +557,7 @@ class TestServer(AioHTTPTestCase):
                             "boldaric.simulator.attract", return_value=[0.1] * 148
                         ):
                             with patch(
-                                "boldaric.feature_helper.track_to_embeddings",
+                                "boldaric.feature_helper.OldFeatureHelper.track_to_embeddings",
                                 return_value={},
                             ):
                                 # Mock multiprocessing pool methods

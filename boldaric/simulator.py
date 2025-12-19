@@ -11,23 +11,22 @@
 import numpy as np
 
 
-def make_history():
+def make_history(dimensions):
     # !mwd - I don't love how I am doing this
     #  But, we essentially have 148 dimensions:
     #  128 for genres
-    #  13 fo mfcc
-    #  2 for groove
-    #  5 for mood
+    #  13 for mfcc
+    #  X for other attribues
     #
-    # We'll create a list of 148 lists were each list will store the
+    # We'll create a list of DIMENSIONS lists were each list will store the
     #  history a tuple (value, weight) for a specific feature
 
-    return [[] for x in range(148)]
+    return [[] for x in range(dimensions)]
 
 
 def add_history(history, feature_list, rank):
-    # The history is a 148 dimension list of lists
-    # Feature list is also 148 dimension
+    # The history is a DIMENSIONS dimension list of lists
+    # Feature list is also DIMENSION dimension
     #  For each dimension, add a tuple of (value, rank)
     assert len(history) == len(feature_list)
 
@@ -89,7 +88,7 @@ def run_simulation(points):
 
 
 def attract(pool, history, chunksize):
-    # For all 148 of our feature dimension,
+    # For all DIMENSION of our feature dimension,
     #  we are going to run a simulation of dropping
     #  a particle near the center of the points in
     #  that feature dimension, and let it bounce around

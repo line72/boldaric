@@ -8,7 +8,8 @@ class StationCreate extends HTMLElement {
       stationName: '',
       ignoreLive: false,
       replayCooldown: 50,
-      artistDownrank: 0.995
+      artistDownrank: 0.995,
+      category: 'normalized'
     };
   }
 
@@ -51,6 +52,16 @@ class StationCreate extends HTMLElement {
             <h4>Selected Seed Song:</h4>
             <p>${this.getSelectedSongInfo()}</p>
           </div>` : ''}
+          
+          <div class="form-group">
+            <label for="station-category">Station Category:</label>
+            <select id="station-category" value="${this.formValues.category}">
+              <option value="normalized" ${this.formValues.category === 'normalized' ? 'selected' : ''}>Normalized</option>
+              <option value="mood" ${this.formValues.category === 'mood' ? 'selected' : ''}>Mood</option>
+              <option value="genre" ${this.formValues.category === 'genre' ? 'selected' : ''}>Genre</option>
+              <option value="old" ${this.formValues.category === 'old' ? 'selected' : ''}>Old</option>
+            </select>
+          </div>
           
           <div class="form-group">
             <label>
@@ -161,6 +172,7 @@ class StationCreate extends HTMLElement {
     const ignoreLiveInput = this.querySelector('#ignore-live');
     const replayCooldownInput = this.querySelector('#replay-cooldown');
     const artistDownrankInput = this.querySelector('#artist-downrank');
+    const categorySelect = this.querySelector('#station-category');
     
     if (stationNameInput) {
       this.formValues.stationName = stationNameInput.value;
@@ -176,6 +188,10 @@ class StationCreate extends HTMLElement {
     
     if (artistDownrankInput) {
       this.formValues.artistDownrank = artistDownrankInput.value;
+    }
+    
+    if (categorySelect) {
+      this.formValues.category = categorySelect.value;
     }
   }
 
@@ -268,8 +284,9 @@ class StationCreate extends HTMLElement {
     const ignoreLive = this.formValues.ignoreLive || this.querySelector('#ignore-live').checked;
     const replayCooldown = parseInt(this.formValues.replayCooldown) || parseInt(this.querySelector('#replay-cooldown').value) || 50;
     const artistDownrank = parseFloat(this.formValues.artistDownrank) || parseFloat(this.querySelector('#artist-downrank').value) || 0.995;
+    const category = this.formValues.category || this.querySelector('#station-category').value || 'normalized';
 
-    console.log('Form values:', { stationName, ignoreLive, replayCooldown, artistDownrank });
+    console.log('Form values:', { stationName, ignoreLive, replayCooldown, artistDownrank, category });
 
     try {
       const response = await fetch('/api/stations', {
@@ -283,7 +300,8 @@ class StationCreate extends HTMLElement {
           song_id: this.selectedSeedSong,
           replay_song_cooldown: replayCooldown,
           replay_artist_downrank: artistDownrank,
-          ignore_live: ignoreLive
+          ignore_live: ignoreLive,
+          category: category
         })
       });
 

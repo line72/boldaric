@@ -6,9 +6,9 @@ import copy
 
 import pytest
 
-from boldaric.vectordb import VectorDB, TrackMetadata
+from boldaric.vectordb import VectorDB, TrackMetadata, CollectionType
 from boldaric.models.track import Track
-from boldaric.feature_helper import track_to_embeddings
+import boldaric.feature_helper
 
 # Seed numpy for consistent test results
 np.random.seed(42)
@@ -88,10 +88,12 @@ def temp_db():
 
 
 def test_add_track(temp_db):
+    collection = CollectionType.OLD
+
     t = make_track(SAMPLE_FEATURES)
     temp_db.add_track(SAMPLE_SUBSONIC_ID, t)
 
-    track = temp_db.get_track(SAMPLE_SUBSONIC_ID)
+    track = temp_db.get_track(collection, SAMPLE_SUBSONIC_ID)
     assert track is not None
     assert track["metadata"]["artist"] == "Test Artist"
     assert track["metadata"]["album"] == "Test Album"
@@ -100,13 +102,17 @@ def test_add_track(temp_db):
 
 
 def test_track_exists(temp_db):
-    assert not temp_db.track_exists(SAMPLE_SUBSONIC_ID)
+    collection = CollectionType.OLD
+
+    assert not temp_db.track_exists(collection, SAMPLE_SUBSONIC_ID)
     t = make_track(SAMPLE_FEATURES)
     temp_db.add_track(SAMPLE_SUBSONIC_ID, t)
-    assert temp_db.track_exists(SAMPLE_SUBSONIC_ID)
+    assert temp_db.track_exists(collection, SAMPLE_SUBSONIC_ID)
 
 
 def test_query_similar(temp_db):
+    collection = CollectionType.OLD
+
     # Add the base track
     t = make_track(SAMPLE_FEATURES)
     temp_db.add_track(SAMPLE_SUBSONIC_ID, t)
@@ -137,8 +143,8 @@ def test_query_similar(temp_db):
     t3 = make_track(different_features)
     temp_db.add_track("different-track", t3)
 
-    features = track_to_embeddings(t)
-    results = temp_db.query_similar(features, n_results=2)
+    features = collection.value.track_to_embeddings(t)
+    results = temp_db.query_similar(collection, features, n_results=2)
 
     assert len(results) == 2
 

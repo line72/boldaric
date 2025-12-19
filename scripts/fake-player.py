@@ -43,7 +43,7 @@ def handle_song_resp(host, token, station, song):
         elif r == 3:
             do_play(host, token, station, song)
         else:
-            return handle_song_resp(host, tokne, station, song)
+            return handle_song_resp(host, token, station, song)
     except ValueError:
         return handle_song_resp(host, token, station, song)
 

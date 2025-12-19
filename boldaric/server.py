@@ -28,7 +28,7 @@ from importlib import resources, metadata
 import boldaric
 import boldaric.subsonic
 from boldaric.utils import get_logger
-from boldaric.records.station_options import StationOptions
+from boldaric.records.station_options import StationOptions, StationCategory
 
 # Development mode path
 DEV_RESOURCES = Path(__file__).parent.parent / "resources"
@@ -44,7 +44,6 @@ SEED_RATING = 8
 THUMBS_UP_RATING = 5
 THUMBS_DOWN_RATING = -3
 
-
 routes = web.RouteTableDef()
 
 
@@ -54,12 +53,14 @@ class CreateStationParams(BaseModel):
     replay_song_cooldown: int = Field(default=50)
     replay_artist_downrank: float = Field(default=0.995)
     ignore_live: bool = Field(default=False)
+    category: str = Field(default="normalized")
 
 
 class UpdateStationParams(BaseModel):
     replay_song_cooldown: int = Field(default=50)
     replay_artist_downrank: float = Field(default=0.995)
     ignore_live: bool = Field(default=False)
+    category: str = Field(default="normalized")
 
 
 def get_next_songs(
@@ -90,7 +91,12 @@ def get_next_songs(
     )
     logger.debug(f"ignoring {station_options.replay_song_cooldown}: {ignore_list}")
 
-    tracks = db.query_similar(new_embeddings, n_results=45, ignore_songs=ignore_list)
+    tracks = db.query_similar(
+        find_collection(station_options.category),
+        new_embeddings,
+        n_results=45,
+        ignore_songs=ignore_list,
+    )
 
     # resort these, and slightly downvote recent artists
     recent_artists = [x.track.artist for x in played[-15:]]
@@ -128,6 +134,19 @@ def get_next_songs(
     logger.debug(f"Possible tracks {possible_tracks}")
 
     return tracks
+
+
+def find_collection(category):
+    if isinstance(category, StationCategory):
+        category_name = category.value
+    else:
+        category_name = category
+
+    for c in boldaric.CollectionType:
+        if c.value.name() == category_name:
+            return c
+
+    raise Exception(f"Invalid collection category: {category_name}")
 
 
 @web.middleware
@@ -204,6 +223,7 @@ async def get_stations(request):
                 "replay_song_cooldown": station.replay_song_cooldown,
                 "replay_artist_downrank": station.replay_artist_downrank,
                 "ignore_live": station.ignore_live,
+                "category": station.category,
             }
             for station in stations
         ]
@@ -246,6 +266,7 @@ async def make_station(request):
             params.replay_song_cooldown,
             params.replay_artist_downrank,
             params.ignore_live,
+            params.category,
         )
 
         station_db.add_track_to_or_update_history(station_id, track, False, SEED_RATING)
@@ -282,11 +303,12 @@ async def get_next_song_for_station(request):
         loop = asyncio.get_running_loop()
 
         station_id = request.match_info["station_id"]
+        station_options: StationOptions = station_db.get_station_options(station_id)
 
         # make our history...
-        history = station_db.get_embedding_history(station_id)
-
-        station_options: StationOptions = station_db.get_station_options(station_id)
+        history = station_db.get_embedding_history(
+            find_collection(station_options.category), station_id
+        )
 
         # load up the track history
         thumbs_downed = station_db.get_thumbs_downed_history(station_id)
@@ -376,6 +398,7 @@ async def get_station_info(request):
                 "replay_song_cooldown": station.replay_song_cooldown,
                 "replay_artist_downrank": station.replay_artist_downrank,
                 "ignore_live": station.ignore_live,
+                "category": station.category,
             }
             return web.json_response(station_dict)
         else:
@@ -412,6 +435,7 @@ async def update_station_info(request):
             params.replay_song_cooldown,
             params.replay_artist_downrank,
             params.ignore_live,
+            params.category,
         )
 
         # Get updated station to return current values
@@ -424,6 +448,7 @@ async def update_station_info(request):
                 "replay_song_cooldown": station.replay_song_cooldown,
                 "replay_artist_downrank": station.replay_artist_downrank,
                 "ignore_live": station.ignore_live,
+                "category": station.category,
             }
             return web.json_response(station_dict)
         else:
@@ -666,7 +691,7 @@ def main():
 
     version = metadata.version("boldaric")
 
-    logger.info("Starting boldaric version {version}")
+    logger.info(f"Starting boldaric version {version}")
 
     # Handle database initialization
     if args.initialize_db:
