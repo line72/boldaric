@@ -52,7 +52,7 @@ def compute_cosine_similarity_explanation(query_embedding, result_embedding):
 def compute_l2_similarity_explanation(query_embedding, result_embedding):
     """
     Compute L2 distance and per-dimension contributions
-    
+
     Returns:
       similarity_score: similarity score derived from L2 distance (1 / (1 + distance))
       distance: overall L2 distance
@@ -66,7 +66,7 @@ def compute_l2_similarity_explanation(query_embedding, result_embedding):
 
     # Overall L2 distance (Euclidean distance)
     distance = np.linalg.norm(q - r)
-    
+
     # Convert distance to similarity score (1 / (1 + distance))
     # This ensures that:
     # - distance=0 -> similarity=1 (most similar)
@@ -95,7 +95,7 @@ def compute_l2_similarity_explanation(query_embedding, result_embedding):
 def compute_ip_similarity_explanation(query_embedding, result_embedding):
     """
     Compute inner product similarity and per-dimension contributions
-    
+
     Returns:
       similarity_score: overall inner product
       dimension_contributions: contribution of each dimension to the similarity

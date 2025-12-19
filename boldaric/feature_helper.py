@@ -43,7 +43,7 @@ class DefaultFeatureHelper(FeatureHelper):
 
     @staticmethod
     def space():
-        return 'cosine'
+        return "cosine"
 
     @staticmethod
     def track_to_embeddings(track: Track) -> list[float]:
@@ -112,7 +112,7 @@ class NormalizedFeatureHelper(FeatureHelper):
 
     @staticmethod
     def space():
-        return 'cosine'
+        return "cosine"
 
     ##
     # Convert a track to embeddings with a normalization
@@ -267,7 +267,7 @@ class OldFeatureHelper(FeatureHelper):
 
     @staticmethod
     def space():
-        return 'cosine'
+        return "cosine"
 
     ##
     # Convert a track to embeddings with the old (default) normalization
@@ -348,7 +348,7 @@ class MoodFeatureHelper(FeatureHelper):
 
     @staticmethod
     def space():
-        return 'ip'
+        return "ip"
 
     @staticmethod
     def track_to_embeddings(track: Track) -> list[float]:
@@ -543,7 +543,7 @@ class GenreFeatureHelper(FeatureHelper):
 
     @staticmethod
     def space():
-        return 'l2'
+        return "l2"
 
     @staticmethod
     def track_to_embeddings(track: Track) -> list[float]:
